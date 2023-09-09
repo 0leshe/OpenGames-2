@@ -17,11 +17,9 @@ local function findMethondPls(where,what,toend)
         if type(v) == 'table' and i:match("[^%/]+(%.[^%/]+)%/?$") == '.lua' then
             if v[what] then
                 table.insert(toend,1, v[what])
-                print('Founded')
             end
         elseif type(v) == 'table' and not i:match("[^%/]+(%.[^%/]+)%/?$") then
             findMethondPls(v,what,toend)
-            print(i,v)
         end
     end
 end
@@ -37,7 +35,11 @@ function Scripts.getMethod(what)
 end
 
 function Scripts.Reload()
-    Scripts.ExecutableForFrame = {}
+    for i,v in pairs(Scripts.ExecutableForFrame) do
+        if tonumber(i) > 0 then
+            table.remove(Scripts.ExecutableForFrame,i)
+        end
+    end
     for i,v in pairs(OE.CurrentScene.Objects) do
         for e,w in pairs(v.Components) do
             if w.type == OE.Component.componentTypes.SCRIPT then

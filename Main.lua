@@ -38,15 +38,17 @@ loadModule("Component")
 loadModule("Localization")
 loadModule("Input")
 loadModule("Storage")
-local function deepcopy(orig) -- For 'load scene'
+loadModule("Sound")
+loadModule("LocalNetwork")
+function OE.deepcopy(orig) -- For 'load scene'
     local orig_type = type(orig)
     local copy
     if orig_type == 'table' then
         copy = {}
         for orig_key, orig_value in next, orig, nil do
-            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+            copy[OE.deepcopy(orig_key)] = OE.deepcopy(orig_value)
         end
-        setmetatable(copy, deepcopy(getmetatable(orig)))
+        setmetatable(copy, OE.deepcopy(getmetatable(orig)))
     else
         copy = orig
     end
@@ -110,11 +112,11 @@ function OE.initWindow(Workspace)
     end
 end
 function OE.exit()
-    OE.Render.Workspace:remove()
+    OE.Render.Window:remove()
 end
 function OE.tick()
-    for i = 1, #OE.Script.ExecutableForFrame do
-        System.call(OE.Script.ExecutableForFrame[i].Script.Update,OE.Script.ExecutableForFrame[i].objectThatCalls,OE)
+    for i,v in  pairs(OE.Script.ExecutableForFrame) do
+        System.call(v.Script.Update,v.objectThatCalls,OE)
     end
 end
 function OE.emptyObject()
@@ -139,9 +141,9 @@ function OE.loadScene(SceneName, dontLaunchScripts)
         OE.Render.clearRender()
         OE.Script.ExecutableForFrame = {}
     end
-    OE.CurrentScene = deepcopy(OE.Project.Scenes[SceneName]) -- В проектах экземпляр сцены, после её загрузки она меняется по скрипту не зависимо от экземпляра
+    OE.CurrentScene = OE.deepcopy(OE.Project.Scenes[SceneName]) -- В проектах экземпляр сцены, после её загрузки она меняется по скрипту не зависимо от экземпляра
     for i = 1, #OE.CurrentScene.Objects do
-        OE.CurrentScene.Objects[OE.CurrentScene.Objects[i].ID] = deepcopy(OE.Project.Scenes[SceneName].Objects[i])
+        OE.CurrentScene.Objects[OE.CurrentScene.Objects[i].ID] = OE.deepcopy(OE.Project.Scenes[SceneName].Objects[i])
         OE.Render.addToRender(
             OE.CurrentScene.Objects[OE.CurrentScene.Objects[i].ID],
             OE.CurrentScene.Objects[i].RenderType

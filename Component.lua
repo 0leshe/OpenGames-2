@@ -44,11 +44,10 @@ function Component.createComponent(Object,ComponentType)
             type = Component.componentTypes.TEXT,
             ID = ID,
             Text = {
-                Text  = "Hello World!",
-                PlaceHolder = "Place Holder",
-                LocalizationText = "",
-                LocalizationPlaceHolder = ""
-            }
+            Text  = "Hello World!",
+            PlaceHolder = "Place Holder",
+            LocalizationText = "",
+            LocalizationPlaceHolder = ""}
         }
     elseif ComponentType == Component.componentTypes.SPRITE then
         Object.Components[ID] = {

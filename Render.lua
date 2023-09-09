@@ -18,27 +18,51 @@ Render.ButtonTypes = {
   Framed = 'framedButton'
 }
 function Render.clearRender()
-    for _,v in pairs(OE.CurrentScene.RenderObjects) do
-        v:remove()
+    for i,v in pairs(OE.CurrentScene.RenderObjects) do
+        Render.removeFromRender(OE.CurrentScene.Objects[i])
     end
 end
 local function loadText(text,textOrHolder)
   if textOrHolder then
-    if text.LocalizationPlaceHolder ~= '' and text.LocalizationPlaceHolder then
-      return OE.Localization.getLocalization(text.LocalizationPlaceHolder)
+    if text.Text.LocalizationPlaceHolder ~= '' and text.Text.LocalizationPlaceHolder then
+      return OE.Localization.getLocalization(text.Text.LocalizationPlaceHolder)
     else
-      return text.PlaceHolder
+      return text.Text.PlaceHolder
     end
   else
-    if text.LocalizationText ~= '' and text.LocalizationText then
-      print(text.LocalizationText)
-      return OE.Localization.getLocalization(text.LocalizationText)
+    if text.Text.LocalizationText ~= '' and text.Text.LocalizationText then
+      return OE.Localization.getLocalization(text.Text.LocalizationText)
     else
-      return text.Text
+      return text.Text.Text
     end
   end
 end
 function Render.removeFromRender(Object)
+  local material = Object:getComponent(OE.Component.componentTypes.MATERIAL) or {Color={}}
+  local Color
+  if material then
+    Color = material.Color
+  end
+  material = {ID=material.ID,type=material.type,Color={
+    First=OE.deepcopy(Color.First),
+    Second=OE.deepcopy(Color.Second),
+    Third=OE.deepcopy(Color.Third),
+    Fourth=OE.deepcopy(Color.Fourth),
+    Fiveth=OE.deepcopy(Color.Fiveth)}
+  }
+  local Position = Object.Transform.Position
+  Position = {Width = OE.deepcopy(Position.Width),Height = OE.deepcopy(Position.Height)}
+  local Scale = Object.Transform.Scale
+  Scale = {Width = OE.deepcopy(Scale.Width),Height = OE.deepcopy(Scale.Height)}
+  local text = Object:getComponent(OE.Component.componentTypes.TEXT) or {Text={}}
+  text.Text = {
+    ID = text.ID,
+    type = text.type,
+    LocalizationPlaceHolder = text.Text.LocalizationPlaceHolder,
+    LocalizationText = text.Text.LocalizationText,
+    Text = OE.deepcopy(text.Text.Text),
+    PlaceHolder = OE.deepcopy(text.Text.PlaceHolder)
+  }
   OE.CurrentScene.RenderObjects[Object.ID]:remove()
 end
 function Render.redrawObject(Object)
@@ -63,7 +87,7 @@ function Render.addToRender(Object)
   local Position = Object.Transform.Position
   local Scale = Object.Transform.Scale
   local sprite = Object:getComponent(OE.Component.componentTypes.SPRITE) or {}
-  local text = Object:getComponent(OE.Component.componentTypes.TEXT) or {}
+  local text = Object:getComponent(OE.Component.componentTypes.TEXT) or {Text={}}
     if Object.renderMode == Render.renderTypes.PANEL then
       OE.CurrentScene.RenderObjects[Object.ID] = OE.Render.Workspace:addChild(GUI.panel(
           Position.x,
@@ -136,11 +160,10 @@ function Render.addToRender(Object)
           loadText(text,false),
           loadText(text,true)
       ))
-      OE.CurrentScene.RenderObjects[Object.ID].onInputFinished = function(_,self) text.Text = self.text Object.onInputFinished(Object,OE) end
+      OE.CurrentScene.RenderObjects[Object.ID].onInputFinished = function() Object.onInputFinished(Object,OE) end
     end
-    if Object.renderMode then -- Making links. If we change object parameter, we change render parameter
+    if OE.CurrentScene.RenderObjects[Object.ID] then -- Making links. If we change object parameter, we change render parameter
       local UI = OE.CurrentScene.RenderObjects[Object.ID]
-
       --                      POSITION
 
       OE.CurrentScene.Objects[Object.ID].Transform.Position = setmetatable({}, {
@@ -180,8 +203,8 @@ function Render.addToRender(Object)
           })
 
           --                 TEXT
-
-          text = setmetatable({text.ID,text.type}, {
+          local a,b = text.Text.LocalizationText, text.Text.LocalizationPlaceHolder
+          text.Text = setmetatable({}, {
             __index = function(self, k)
               if k == 'Text' then
                 return UI.text
@@ -195,7 +218,9 @@ function Render.addToRender(Object)
               elseif k == 'PlaceHolder' then
                 UI.placeholderText = v
               end
-            end
+            end,
+            LocalizationText = a,
+            LocalizationPlaceHolder = b
           })
 
           --                SPRITE

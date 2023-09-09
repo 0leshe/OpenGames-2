@@ -1,0 +1,12 @@
+{
+    Label = "Редактор Opengames 2",
+    File = "Файл"
+    Open = "Открыть",
+    Save = "Сохранить",
+    Export = "Экспорт",
+    Windows = "Окна"
+    SceneObjects = "Объекты в сцене",
+    GameView = "Игровое окно",
+    Inspector = "Инспектор",
+    ProjectFiles = "Файлы проэкта"
+}

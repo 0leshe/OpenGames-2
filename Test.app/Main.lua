@@ -24,7 +24,7 @@ local a = obj:addComponent(OE.Component.componentTypes.MATERIAL)
 local b = obj:addComponent(OE.Component.componentTypes.TEXT)
 OE.LocalNetwork.host('129.123.2.2',10,function ()
   print(OE.LocalNetwork.CurrentConnection.lastMessage)
-  obj.Components[b].Text.Text = OE.LocalNetwork.CurrentConnection.lastMessage[4]
+  obj.Components[b].Text.Text = OE.LocalNetwork.CurrentConnection.lastMessage[3]
 end)
 obj.Components[b].Text.Text = 'tet'
 obj.onValueChanged = OE.Script.getMethod('button')[1]

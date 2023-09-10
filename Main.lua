@@ -164,6 +164,9 @@ function OE.createObject()
     OE.CurrentScene.Objects[object.ID] = object
     return object
 end
-OE.initWindow()
-OE.loadScene("Empty")
+local args = {...}
+if not args[1] then
+    OE.initWindow()
+    OE.loadScene("Empty")
+end
 return OE

@@ -1,0 +1,12 @@
+{
+    exit = "Exit",
+    done = 'Done! You can now close this app.',
+    path = 'Path',
+    Open = 'Open',
+    Cancel = 'Cancel',
+    welcome = "Welcome to installer!",
+    continue = 'Continue',
+    installer = 'Installer',
+    explore = "Show",
+    choosePath = "Choose path where applciation will be installed."
+}

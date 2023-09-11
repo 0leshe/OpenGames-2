@@ -78,6 +78,25 @@ local function setRenderMode(Object,Mode)
         Object.maxValue = 100
         Object.Value = 0
         Object.minValue = 0
+    elseif Mode == modes.PROGRESSINDICATOR then
+        Object.Active = false
+        Object.Roll = function() return 'Add to render first' end
+    elseif Mode == modes.PROGRESSBAR then
+        Object.Value = 0
+    elseif Mode == modes.COMBOBOX then
+        Object.Items = {}
+        function Object.addItem(name,onTouch,disabled)
+            table.insert(Object.Items,1,{name=name,onTouch=onTouch,disabled=disabled})
+        end
+        function Object.removeItem(nameidk)
+            for i = 1, #Object.Items do
+                if Object.Items[i].name == nameidk then
+                    table.remove(Object.Items,i)
+                    return true
+                end
+            end
+            return false
+        end
     end
     Object.renderMode = Mode
 end

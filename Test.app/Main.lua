@@ -19,24 +19,24 @@ OE.Project.Window.Height = 50
 OE.Project.Window.Title = "Test Window"
 OE.initWindow()
 local obj = OE.createObject()
-obj:setRenderMode(OE.Render.renderTypes.TEXT)
+obj:setRenderMode(OE.Render.renderTypes.COMBOBOX)
+obj.Active = true
 local a = obj:addComponent(OE.Component.componentTypes.MATERIAL)
 local b = obj:addComponent(OE.Component.componentTypes.TEXT)
 OE.LocalNetwork.host('129.123.2.2',10,function ()
-  print(OE.LocalNetwork.CurrentConnection.lastMessage)
   obj.Components[b].Text.Text = OE.LocalNetwork.CurrentConnection.lastMessage[3]
 end)
 obj.Components[b].Text.Text = 'tet'
 obj.onValueChanged = OE.Script.getMethod('button')[1]
 obj.Components[a].Color.First = 0x007755
 obj.Components[a].Color.Second = 0xFFFFFF
-obj.Components[a].Color.Third = 0xFFFFFF
---obj.Components[a].Color.Fourth = 0x007755
+obj.Components[a].Color.Third = 0x00FFFF
+obj.Components[a].Color.Fourth = 0x007755
 --obj.Components[obj:addComponent(OE.Component.componentTypes.SCRIPT)].file = "Test.lua"
 --obj.Components[obj:addComponent(OE.Component.componentTypes.TEXT)].Text = "test"
 --obj.Components[obj:addComponent(OE.Component.componentTypes.SPRITE)].file = 'Test.pic'
 obj.Transform.Scale.Width = 10
---obj.Transform.Scale.Height = 10
+obj.Transform.Scale.Height = 10
 obj.Transform.Position.x = 10
 obj.Transform.Position.y = 3
 local obj1 = OE.createObject()
@@ -58,11 +58,19 @@ obj1.Transform.Scale.Width = 40
 obj1.Transform.Scale.Height = 6
 --obj.Components[obj:addComponent(OE.Component.componentTypes.SCRIPT)].file = "Test.lua"
 local function button(Object)
+  obj.addItem(b.Text.Text,OE.Script.getMethod('choosedItem')[1])
+  obj.updateItems()
   print('You change me!:3')
 end
+local function choosedItem(Item)
+  print(Item.name)
+end
 OE.CurrentScene.Storage.test = {}
-OE.Storage.createFile(OE.CurrentScene.Storage.test,'Test.lua',{Start=start,Update=update,button=button})
+OE.Storage.createFile(OE.CurrentScene.Storage.test,'Test.lua',{choosedItem = choosedItem,Start=start,Update=update,button=button})
 OE.Script.Reload()
+obj.addItem('Test',OE.Script.getMethod('choosedItem')[1])
+obj.addItem('Tt',OE.Script.getMethod('choosedItem')[1])
+obj.addItem('Tjj',OE.Script.getMethod('choosedItem')[1])
 obj.onValueChanged = OE.Script.getMethod('button')[1]
 obj1.onInputFinished = OE.Script.getMethod('button')[1]
 obj1:addToRender()

@@ -2,9 +2,12 @@ local args = {...}
 local OE = args[1]
 local LN = {
     MAC = 'NIL',
-    ip = '123.0.1.'..tostring(math.random(0,255)),
+    ip = '127.0.1.'..tostring(math.random(0,255)),
     CurrentConnection = {
         ip = '127.0.0.1',
+        lastPing = 0,
+        pingFreq = 2.5,
+        pingTrash = 3,
         port = 30255,
         lastMessage = {'Empty'},
         messageTrashhold = 1,
@@ -28,15 +31,19 @@ if require("Component").isAvailable('modem') then
                 for i = 6,#OE.lastEvent do
                     table.insert(packedMesage,OE.lastEvent[i])
                 end
-                if packedMesage[1] == LN.CurrentConnection.ip then
+                if packedMesage[1] == LN.CurrentConnection.ip or packedMesage[1] == LN.ip then
                     if packedMesage[3] == 'connect pls' then
                         if host then
-                            LN.CurrentConnection.connections[OE.lastEvent[3]] = {ip=packedMesage[2]}
+                            LN.CurrentConnection.connections[OE.lastEvent[3]] = {ip=packedMesage[2],trash = 0, wasPinged = false}
                         end
                     elseif packedMesage[3] == 'disconnect pls' then
                         if host then
                             table.remove(LN.CurrentConnection.connections,OE.lastEvent[3])
                         end
+                    elseif packedMesage[3] == 'pingProcedure' then
+                        LN.send('pingPong')
+                    elseif packedMesage[3] == 'pingPong' then
+                        LN.CurrentConnection.connections[OE.lastEvent[3]].wasPinged = true
                     else
                         LN.CurrentConnection.lastMessage = packedMesage
                         table.remove(LN.CurrentConnection.messageHistory, LN.CurrentConnection.messageTrashhold)
@@ -45,6 +52,21 @@ if require("Component").isAvailable('modem') then
                     end
                 end
              end
+             if require('Computer').uptime() > LN.CurrentConnection.lastPing + LN.CurrentConnection.pingFreq then
+                LN.CurrentConnection.lastPing = require('Computer').uptime()
+                for i, v in pairs(LN.CurrentConnection.connections) do
+                    if v.wasPinged == false then
+                        v.trash = v.trash + 1
+                    else
+                        v.trash = 0
+                    end
+                    if v.trash >= LN.CurrentConnection.pingTrash then
+                        LN.CurrentConnection.connections[i] = nil
+                    end
+                    v.wasPinged = false
+                end
+                LN.sendToAll('pingProcedure')
+             end
         end}}
     end
     function LN.host(ip,port,onMessage)
@@ -52,6 +74,14 @@ if require("Component").isAvailable('modem') then
     end
     function LN.send(...)
         modem.broadcast(LN.CurrentConnection.port, LN.CurrentConnection.ip, LN.ip, ...)
+    end
+    function LN.sendTo(ip,...)
+        modem.broadcast(LN.CurrentConnection.port,ip,LN.ip,...)
+    end
+    function LN.sendToAll(...)
+        for _, v in pairs(LN.CurrentConnection.connections) do
+            modem.broadcast(LN.CurrentConnection.port,v.ip,LN.ip,...)
+        end
     end
     function LN.avialible()
         return true

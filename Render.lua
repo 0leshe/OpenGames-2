@@ -10,7 +10,10 @@ Render.renderTypes = {
     IMAGE = 4,
     INPUT = 5,
     SLIDER = 6,
-    SWITCH = 7
+    SWITCH = 7,
+    COMBOBOX = 8,
+    PROGRESSINDICATOR = 9,
+    PROGRESSBAR = 10
 }
 Render.ButtonTypes = {
   Default = 'button',
@@ -103,6 +106,76 @@ function Render.addToRender(Object)
           Color.First,
           loadText(text,false)
       ))
+    elseif Object.renderMode == Render.renderTypes.PROGRESSINDICATOR then
+      OE.CurrentScene.RenderObjects[Object.ID] = OE.Render.Workspace:addChild(GUI.progressIndicator(
+          Position.x,
+          Position.y,
+          Color.First,
+          Color.Second,
+          Color.Third
+      ))
+      OE.CurrentScene.RenderObjects[Object.ID].active = Object.Active
+      Object.Active = nil
+      function Object.Roll()
+         OE.CurrentScene.RenderObjects[Object.ID]:roll()
+      end
+      Object = setmetatable(Object,{
+        __index = function(self, k)
+          if k == 'Active' then
+            return OE.CurrentScene.RenderObjects[Object.ID].active
+          end
+        end,
+        __newindex = function(self, k, v)
+          if k == 'Active' then
+            OE.CurrentScene.RenderObjects[Object.ID].active = v
+          end
+        end
+      })
+    elseif Object.renderMode == Render.renderTypes.PROGRESSBAR then
+      OE.CurrentScene.RenderObjects[Object.ID] = OE.Render.Workspace:addChild(GUI.progressBar(
+          Position.x,
+          Position.y,
+          Scale.Width,
+          Color.First,
+          Color.Second,
+          Color.Third,
+          Object.Value,
+          true
+      ))
+      Object.Value = nil
+      Object = setmetatable(Object,{
+        __index = function(self, k)
+          if k == 'Value' then
+            return OE.CurrentScene.RenderObjects[Object.ID].value
+          end
+        end,
+        __newindex = function(self, k, v)
+          if k == 'Value' then
+            OE.CurrentScene.RenderObjects[Object.ID].value = v
+          end
+        end
+      })
+    elseif Object.renderMode == Render.renderTypes.COMBOBOX then
+      OE.CurrentScene.RenderObjects[Object.ID] = OE.Render.Workspace:addChild(GUI.comboBox(
+          Position.x,
+          Position.y,
+          Scale.Width,
+          Scale.Height,
+          Color.First,
+          Color.Second,
+          Color.Third,
+          Color.Fourth
+      ))
+      function Object.updateItems()
+        OE.CurrentScene.RenderObjects[Object.ID]:clear()
+        for i = 1, #Object.Items do
+          local tmp = OE.CurrentScene.RenderObjects[Object.ID]:addItem(Object.Items[i].name)
+          tmp.onTouch = function()
+            Object.Items[i].onTouch(Object.Items[i], Object, OE)
+          end
+        end
+      end
+      Object.updateItems()
     elseif Object.renderMode == Render.renderTypes.BUTTON then
       OE.CurrentScene.RenderObjects[Object.ID] = OE.Render.Workspace:addChild(GUI[Object.ButtonType](
           Position.x,

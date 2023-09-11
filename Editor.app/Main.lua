@@ -5,8 +5,8 @@ local fs = require('FileSystem')
 local System = require('System')
 local uni = require('Unicode')
 local lc = System.getCurrentScriptLocalization()
+local hubPath = string.gsub(System.getCurrentScript(),'Main.lua','')
 local UserData = System.getUserSettings()
-local CurrentTheme = 'dark'
 local ChoosedProject = 1
 local Colors = {light={0xEEEEEE, 0x202020, 0x808080}, dark={0x202020,0x202020, 0x909090}} -- bg,bg2,fg
 
@@ -18,6 +18,17 @@ if not UserData.OpenGames.Projects then
     UserData.OpenGames.Projects = {}
     System.saveUserSettings()
 end
+if not UserData.OpenGames.Settings then
+    UserData.OpenGames.Settings = {preferdLanguage = '',CurrentTheme = true}
+    System.saveUserSettings()
+end
+local CurrentTheme
+if UserData.OpenGames.Settings.CurrentTheme then
+    CurrentTheme = 'dark'
+else
+    CurrentTheme = 'light'
+end
+lc = fs.readTable(hubPath..'/Localizations/'..UserData.OpenGames.Settings.preferdLanguage..'.lang') or lc
 
 local function getColor(num)
     if num == 2 then
@@ -88,13 +99,13 @@ end
 local projectsCont = win:addChild(GUI.container(3,3,47,37))
 projectsCont:addChild(GUI.panel(1,1,47,37,getColor(2)))
 local projectsLists = projectsCont:addChild(GUI.container(1,1,47,#UserData.OpenGames.Projects*8+4*#UserData.OpenGames.Projects))
-local scrollProject
+local scrollProject = {hidden = true}
 local function checkCountForScrollBar()
     if #UserData.OpenGames.Projects > 4 then
-        if scrollProject then
+        if scrollProject.hidden == false then
             scrollProject:remove()
         end
-        scrollProject = projectsCont:addChild(GUI.scrollBar(46,2,1,35,getColor(1),getColor(3),1,#UserData.OpenGames.Projects-3,1,1,1,true))
+        scrollProject = projectsCont:addChild(GUI.scrollBar(46,2,1,35,getColor(1),getColor(3),1,#UserData.OpenGames.Projects-3,1,1,1))
         scrollProject.onTouch = function()
             projectsLists.localY = -(scrollProject.value * 9 - 10)
         end
@@ -102,17 +113,20 @@ local function checkCountForScrollBar()
 end
 local function projectPanel(i)
     local projectPath = UserData.OpenGames.Projects[i]
-    local BGpanel = GUI.container(3,i*7-7+2*i,42,7)
-    BGpanel:addChild(GUI.panel(1,1,42,7,getColor(1))) -- Project Panel bg
+    local bonus = 1
+    if scrollProject.hidden == false then
+        bonus = 0
+    end
+    local BGpanel = GUI.container(3,i*7-7+2*i,40+bonus,7)
+    BGpanel:addChild(GUI.panel(1,1,40+bonus,7,getColor(1))) -- Project Panel bg
     BGpanel:addChild(GUI.text(2,2,getColor(3),readProject(projectPath).Name)) -- Project line
     BGpanel:addChild(GUI.text(2,4,getColor(3),projectPath)) -- Project line
-    local tmp = BGpanel:addChild(GUI.button(2,6,40,1,getColor(2),getColor(3),getColor(3),getColor(2),' '))
+    local tmp = BGpanel:addChild(GUI.button(2,6,38+bonus,1,getColor(2),getColor(3),getColor(3),getColor(2),' '))
     BGpanel.index = i
     tmp.onTouch = function() -- Middle Line
         ChoosedProject = BGpanel.index or 1
         reloadInfo()
     end
-    --BGpanel:addChild(GUI.text(2,6,getColor(3),os.date(lc.lastModified..": %Y.%m.%d %H:%M "..lc.Size..': '..fs.size(projectPath), fs.lastModified(projectPath)))) -- Project Last Opend
     return BGpanel
 end
 local hintCreateNewProject
@@ -145,6 +159,11 @@ deleteProject.onTouch = function()
             ChoosedProject = 1
             reloadInfo()
             checkCountForScrollBar()
+        end
+        if #UserData.OpenGames.Projects <= 4 then
+            projectsLists.localY = 1
+            scrollProject:remove()
+            scrollProject = {hidden = true}
         end
     end
 end
@@ -243,5 +262,73 @@ niceLineContainter.eventHandler = function()
             line1.localY = -5
         end
         wk:draw(true)
+    end
+end
+
+
+menu:addItem(lc.settings).onTouch = function()
+    local settingsWin = createWindow(80,29,lc.settings)
+    local paramsanel = settingsWin:addChild(GUI.container(29,3,50,26))
+    paramsanel:addChild(GUI.panel(1,1,50,26,getColor(2)))
+    local settingsinfo = paramsanel:addChild(GUI.container(2,1,50,26))
+    local function createSetting(setting,index)
+        local toend = GUI.container(2,index*6-6+index*2,48,26)
+        toend:addChild(GUI.panel(1,1,46,7,getColor(1)))
+        toend:addChild(GUI.text(3,2,getColor(3),setting.text))
+        if setting.type == 'input' then
+            toend:addChild(GUI.input(3,4,44,3,getColor(2),getColor(3),0xFF0000,getColor(3),getColor(2),UserData.OpenGames.Settings[setting.paramName],lc.text)).onInputFinished = function(_,self)
+                UserData.OpenGames.Settings[setting.paramName] = self.text
+            end
+        elseif setting.type == 'comboBox' then
+            local tmp = toend:addChild(GUI.comboBox(3, 4, 42, 3, getColor(2), getColor(3), getColor(2), getColor(3))) -- Украдено из первого Opengames
+            if UserData.OpenGames.Settings[setting.paramName] == nil then
+                UserData.OpenGames.Settings[setting.paramName] = false
+            end
+            if setting.vars then
+                for i = 1, #setting.vars do
+                    tmp:addItem(setting.vars[i].text).onTouch = function()
+                        UserData.OpenGames.Settings[setting.vars[i].param] = setting.vars[i].paramName
+                        System.saveUserSettings()
+                    end
+                end
+            else
+                if UserData.OpenGames.Settings[setting.paramName] == true then
+                    tmp:addItem(lc.truee).onTouch = function()
+                        UserData.OpenGames.Settings[setting.paramName] = true
+                        System.saveUserSettings()
+                    end
+                    tmp:addItem(lc.falsee).onTouch = function()
+                        UserData.OpenGames.Settings[setting.paramName] = false
+                        System.saveUserSettings()
+                    end
+                else
+                    tmp:addItem(lc.falsee).onTouch = function()
+                        UserData.OpenGames.Settings[setting.paramName] = false
+                        System.saveUserSettings()
+                    end
+                    tmp:addItem(lc.truee).onTouch = function()
+                        UserData.OpenGames.Settings[setting.paramName] = true
+                        System.saveUserSettings()
+                    end
+                end
+            end
+        end
+        return toend
+    end
+    local function showSetting(settings)
+        settingsinfo:removeChildren()
+        for i = 1, #settings do
+            settingsinfo:addChild(createSetting(settings[i],i))
+        end
+    end
+    local paramsChoosePanel = settingsWin:addChild(GUI.container(2,3,25,26))
+    paramsChoosePanel:addChild(GUI.panel(2,1,25,26,getColor(2)))
+    paramsChoosePanel:addChild(GUI.button(4,2,20,3,getColor(1),getColor(3),getColor(1),getColor(2),lc.preferences)).onTouch = function()
+        local idk = fs.list(hubPath..'/Localizations')
+        local toend = {}
+        for i = 1, #idk do
+            table.insert(toend,1, {param = 'preferdLanguage',paramName = string.gsub(idk[i],'.lang',''),text = string.gsub(idk[i],'.lang','')})
+        end
+        showSetting({{type='comboBox',paramName='',text=lc.preferdLanguage,vars=toend},{type='comboBox',paramName='CurrentTheme',text=lc.useDarkTheme}})
     end
 end

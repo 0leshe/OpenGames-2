@@ -4,8 +4,12 @@ local OE = args[1]
 local Scripts = {ExecutableForFrame={}}
 
 function Scripts.Execute(script,objectThatCalls)
-    System.call(script.Start,objectThatCalls,OE)
-    table.insert(Scripts.ExecutableForFrame,{Script = script,objectThatCalls = objectThatCalls})
+    if script.Start then
+        System.call(script.Start,objectThatCalls,OE)
+    end
+    if script.Update then
+        table.insert(Scripts.ExecutableForFrame,{Script = script,objectThatCalls = objectThatCalls})
+    end
 end
 
 function Scripts.loadMethod(from,what)

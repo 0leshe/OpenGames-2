@@ -43,10 +43,15 @@ local function getColor(num)
 end
 
 local wk,win,menu = System.addWindow(GUI.titledWindow(1,1,100,40,lc.LabelHub,true))
+local winMask = win:addChild(GUI.container(1,1,100,40))
 win.onResize = function(newWidth, newHeight)
   win.backgroundPanel.width, win.backgroundPanel.height = newWidth, newHeight
   win.titlePanel.width = newWidth
   win.titleLabel.width = newWidth
+  if winMask then
+     winMask.width = newWidth
+    winMask.height = newHeight
+  end
 end
 
 win.backgroundPanel.colors.background = getColor(1)
@@ -62,7 +67,7 @@ local function reloadInfo()
     if infoPanel then
         infoPanel:remove()
     end
-    infoPanel = win:addChild(GUI.container(55,7,44,29))
+    infoPanel = winMask:addChild(GUI.container(55,7,44,29))
     local proj = readProject(UserData.OpenGames.Projects[ChoosedProject])
     infoPanel:addChild(GUI.panel(1,1,44,29,getColor(2)))
     infoPanel:addChild(GUI.text(2,2,getColor(3),lc.infoAbtProject))
@@ -96,7 +101,7 @@ local function reloadInfo()
     infoPanel:addChild(GUI.text(2,8,getColor(3),lc.ObjectsCount .. ': '..tostring(cnt)))
     infoPanel:addChild(GUI.text(2,9,getColor(3),lc.StorageElementsCount .. ': '..tostring(storageCount)))
 end
-local projectsCont = win:addChild(GUI.container(3,3,47,37))
+local projectsCont = winMask:addChild(GUI.container(3,3,47,37))
 projectsCont:addChild(GUI.panel(1,1,47,37,getColor(2)))
 local projectsLists = projectsCont:addChild(GUI.container(1,1,47,#UserData.OpenGames.Projects*8+4*#UserData.OpenGames.Projects))
 local scrollProject = {hidden = true}
@@ -135,13 +140,15 @@ for i = 1,#UserData.OpenGames.Projects do
     projectsLists:addChild(projectPanel(i))
 end
 
-local deleteProject = win:addChild(GUI.button(55,3,21,3,getColor(2),getColor(3),getColor(3),getColor(2),lc.deleteProject))
-local loadProject = win:addChild(GUI.button(55,37,44,3,getColor(2),getColor(3),getColor(3),getColor(2),lc.loadProject))
+local deleteProject = winMask:addChild(GUI.button(55,3,21,3,getColor(2),getColor(3),getColor(3),getColor(2),lc.deleteProject))
+local loadProject = winMask:addChild(GUI.button(55,37,44,3,getColor(2),getColor(3),getColor(3),getColor(2),lc.loadProject))
 deleteProject.onTouch = function()
     if projectsLists.children[ChoosedProject] then
         table.remove(projectsLists.children,ChoosedProject)
         fs.remove(UserData.OpenGames.Projects[ChoosedProject])
         table.remove(UserData.OpenGames.Projects,ChoosedProject)
+        projectsLists.localY = 1
+        scrollProject.value = 1
         for i = 1,#projectsLists.children do
             if projectsLists.children[i].index > ChoosedProject then
                 projectsLists.children[i].index = projectsLists.children[i].index - 1
@@ -167,9 +174,8 @@ deleteProject.onTouch = function()
         end
     end
 end
-
 local function createWindow(w,h,l)
-    local newProjectWin = win:addChild(GUI.titledWindow(math.ceil(50-w/2),math.ceil(20-h/2),w,h,l,true)) -- 50 and 20 is win.width/2 and win.height/2
+    local newProjectWin = wk:addChild(GUI.titledWindow(math.ceil(80-w/2),math.ceil(25-h/2),w,h,l,true)) -- 50 and 20 is win.width/2 and win.height/2
     newProjectWin.actionButtons.close.onTouch = function()
         newProjectWin:remove()
     end
@@ -181,7 +187,8 @@ local function createWindow(w,h,l)
     return newProjectWin
 end
 
-local newProject = win:addChild(GUI.button(78,3,21,3,getColor(2),getColor(3),getColor(3),getColor(2),lc.newProject))
+
+local newProject = winMask:addChild(GUI.button(78,3,21,3,getColor(2),getColor(3),getColor(3),getColor(2),lc.newProject))
 newProject.onTouch = function()
     local newProjectWin = createWindow(33,15,lc.newProject)
     local pathinput = newProjectWin:addChild(GUI.input(2,3,20,3,getColor(2),getColor(3),0x990000,getColor(3),getColor(2),lc.projectPath,lc.projectPath))
@@ -240,7 +247,7 @@ newProject.onTouch = function()
         end
     end
 end
-hintCreateNewProject = win:addChild(GUI.text(100-2-math.ceil(uni.len(lc.hintCreateNewProject)*1.5),38,getColor(3),lc.hintCreateNewProject))
+hintCreateNewProject = winMask:addChild(GUI.text(100-2-math.ceil(uni.len(lc.hintCreateNewProject)*1.5),38,getColor(3),lc.hintCreateNewProject))
 hintCreateNewProject.hidden = true
 if #UserData.OpenGames.Projects == 0 then
     hintCreateNewProject.hidden = false
@@ -250,7 +257,7 @@ else
     reloadInfo()
 end
 -- nice line in the middle of app
-local niceLineContainter = win:addChild(GUI.container(52,3,1,37))
+local niceLineContainter = winMask:addChild(GUI.container(52,3,1,37))
 niceLineContainter:addChild(GUI.panel(1,1,1,37,getColor(2)))
 local line1 = niceLineContainter:addChild(GUI.panel(1,1,1,5,getColor(3)))
 local timestamp = require('computer').uptime()
@@ -266,7 +273,8 @@ niceLineContainter.eventHandler = function()
 end
 
 
-menu:addItem(lc.settings).onTouch = function()
+local itemSettings = menu:addItem(lc.settings)
+itemSettings.onTouch = function()
     local settingsWin = createWindow(80,29,lc.settings)
     local paramsanel = settingsWin:addChild(GUI.container(29,3,50,26))
     paramsanel:addChild(GUI.panel(1,1,50,26,getColor(2)))
@@ -331,4 +339,13 @@ menu:addItem(lc.settings).onTouch = function()
         end
         showSetting({{type='comboBox',paramName='',text=lc.preferdLanguage,vars=toend},{type='comboBox',paramName='CurrentTheme',text=lc.useDarkTheme}})
     end
+end
+loadProject.onTouch = function()
+    win:resize(160,50)
+    win.titleLabel.text = lc.LabelEditor
+    winMask:remove()
+    win.localX = 1
+    win.localY = 1
+    itemSettings:remove()
+    loadfile(hubPath..'/Editor.lua')(UserData.OpenGames.Projects[ChoosedProject], {wk,win,menu})
 end

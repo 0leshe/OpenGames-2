@@ -1,5 +1,5 @@
 {
-    Label = "Редактор Opengames 2",
+    LabelEditor = "Редактор OpenGames 2",
     LabelHub = "Opengames 2 Хаб",
     File = "Файл",
     Open = "Открыть",

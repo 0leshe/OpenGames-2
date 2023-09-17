@@ -237,6 +237,9 @@ function Render.addToRender(Object)
     end
     if OE.CurrentScene.RenderObjects[Object.ID] then -- Making links. If we change object parameter, we change render parameter
       local UI = OE.CurrentScene.RenderObjects[Object.ID]
+      local renderTypes = Render.renderTypes
+      local colors = UI.colors
+      local renderMode = Object.renderMode
       --                      POSITION
 
       OE.CurrentScene.Objects[Object.ID].Transform.Position = setmetatable({}, {
@@ -316,47 +319,123 @@ function Render.addToRender(Object)
          material.Color = setmetatable({}, {
           __index = function(self, k)
             if k == 'First' then
-              if Object.renderMode == Render.renderTypes.PANEL  then
-                return UI.colors.background
-              elseif Object.renderMode == Render.renderTypes.BUTTON then
-                return UI.colors.default.background
-              elseif Object.renderMode == Render.renderTypes.TEXT then
+              if renderMode == renderTypes.PANEL  then
+                return colors.background
+              elseif renderMode == renderTypes.BUTTON or renderMode == renderTypes.INPUT or renderMode == renderTypes.COMBOBOX then
+                return colors.default.background
+              elseif renderMode == renderTypes.TEXT then
                 return UI.color
+              elseif renderMode == renderTypes.SWITCH or renderMode == renderTypes.PROGRESSBAR then
+                return colors.active
+              elseif renderMode == renderTypes.SLIDER then
+                return colors.pipe
+              elseif renderMode == renderTypes.PROGRESSINDICATOR then
+                return colors.pasive
               end
             elseif k == 'Second' then
-              if Object.renderMode == Render.renderTypes.BUTTON then
-                return UI.colors.default.text
+              if renderMode == renderTypes.BUTTON or renderMode == renderTypes.INPUT or renderMode == renderTypes.COMBOBOX then
+                return colors.default.text
+              elseif renderMode == renderTypes.SWITCH or renderMode == renderTypes.PROGRESSBAR then
+                return colors.passive
+              elseif renderMode == renderTypes.SLIDER then
+                return colors.active
+              elseif renderMode == renderTypes.PROGRESSINDICATOR then
+                return colors.primary
               end
             elseif k == 'Third' then
-              if Object.renderMode == Render.renderTypes.BUTTON then
-                return UI.colors.pressed.background
+              if renderMode == renderTypes.BUTTON then
+                return colors.pressed.background
+              elseif renderMode == renderTypes.INPUT then
+                return colors.placeholderText
+              elseif renderMode == renderTypes.SWITCH then
+                return colors.pipe
+              elseif renderMode == renderTypes.SLIDER then
+                return colors.passive
+              elseif renderMode == renderTypes.PROGRESSINDICATOR then
+                return colors.secondary
+              elseif renderMode == renderTypes.PROGRESSBAR then
+                return colors.value
+              elseif renderMode == renderTypes.COMBOBOX then
+                return colors.arrow.background
               end
             elseif k == 'Fourth' then
-              if Object.renderMode == Render.renderTypes.BUTTON then
-                return UI.colors.pressed.text
+              if renderMode == renderTypes.BUTTON then
+                return colors.pressed.text
+              elseif renderMode == renderTypes.INPUT then
+                return colors.focused.background
+              elseif renderMode == renderTypes.SLIDER then
+                return colors.value
+              elseif renderMode == renderTypes.COMBOBOX then
+                return colors.arrow.text
+              end
+            elseif k == 'Fiveth' then
+              if renderMode == renderTypes.INPUT then
+                return colors.focused.text
               end
             end
           end,
           __newindex = function(self, k, v)
             if k == 'First' then
-              if Object.renderMode == Render.renderTypes.PANEL  then
-                UI.colors.background = v
-              elseif Object.renderMode == Render.renderTypes.BUTTON then
-                UI.colors.default.background = v
-              elseif Object.renderMode == Render.renderTypes.TEXT then
+              if renderMode == renderTypes.PANEL  then
+                colors.background = v
+              elseif renderMode == renderTypes.BUTTON or renderMode == renderTypes.INPUT then
+                colors.default.background = v
+              elseif renderMode == renderTypes.COMBOBOX then
+                  UI.dropDownMenu.colors.default.background = v
+                  colors.default.background = v
+              elseif renderMode == renderTypes.TEXT then
                 UI.color = v
+              elseif renderMode == renderTypes.SWITCH or renderMode == renderTypes.PROGRESSBAR then
+                colors.active = v
+              elseif renderMode == renderTypes.SLIDER then
+                colors.pipe = v
+              elseif renderMode == renderTypes.PROGRESSINDICATOR then
+                colors.pasive = v
               end
             elseif k == 'Second' then
-              if Object.renderMode == Render.renderTypes.BUTTON then
-                UI.colors.default.text = v
+              if renderMode == renderTypes.BUTTON or renderMode == renderTypes.INPUT then
+                colors.default.text = v
+              elseif renderMode == renderTypes.COMBOBOX then
+                  UI.dropDownMenu.colors.default.text = v
+                  colors.default.text = v
+              elseif renderMode == renderTypes.SWITCH or renderMode == renderTypes.PROGRESSBAR then
+                colors.passive = v
+              elseif renderMode == renderTypes.SLIDER then
+                colors.active = v
+              elseif renderMode == renderTypes.PROGRESSINDICATOR then
+                colors.primary = v
               end
             elseif k == 'Third' then
-              if Object.renderMode == Render.renderTypes.BUTTON then
-                UI.colors.pressed.background = v
+              if renderMode == renderTypes.BUTTON then
+                colors.pressed.background = v
+              elseif renderMode == renderTypes.INPUT then
+                colors.placeholderText = v
+              elseif renderMode == renderTypes.SWITCH then
+                colors.pipe = v
+              elseif renderMode == renderTypes.SLIDER then
+                colors.passive = v
+              elseif renderMode == renderTypes.PROGRESSINDICATOR then
+                colors.secondary = v
+              elseif renderMode == renderTypes.PROGRESSBAR then
+                colors.value = v
+              elseif renderMode == renderTypes.COMBOBOX then
+                colors.arrow.background = v
+                UI.dropDownMenu.colors.selected.background = v
               end
             elseif k == 'Fourth' then
-              if Object.renderMode == Render.renderTypes.BUTTON then
-                UI.colors.pressed.text = v
+              if renderMode == renderTypes.BUTTON then
+                colors.pressed.text = v
+              elseif renderMode == renderTypes.INPUT then
+                colors.focused.background = v
+              elseif renderMode == renderTypes.SLIDER then
+                colors.value = v
+              elseif renderMode == renderTypes.COMBOBOX then
+                colors.arrow.text = v
+                UI.dropDownMenu.colors.selected.text = v
+              end
+            elseif k == 'Fiveth' then
+              if renderMode == renderTypes.INPUT then
+                colors.focused.text = v
               end
             end
           end

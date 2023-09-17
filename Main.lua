@@ -2,6 +2,7 @@ local GUI = require("GUI")
 local System = require("System")
 local fs = require("FileSystem")
 local wasInited
+local UserData = System.getUserSettings()
 local OE = {
     Project = {
         Storage = {},
@@ -13,7 +14,7 @@ local OE = {
         Scenes = {
             ["Empty"] = {
                 Storage = {},
-                Localization = {['Russian']={}},
+                Localization = {},
                 FilesPaths = {},
                 Name = "Empty",
                 Objects = {},
@@ -22,13 +23,14 @@ local OE = {
         }
     }
 }
+OE.Project.Scenes['Empty'].Localization[UserData.localizationLanguage] = {}
 OE.Debug = {
     Log = function(str)
         OE.Debug.LogString = OE.Debug.LogString .. "\n" .. str
     end,
     LogString = ""
 }
-OE.huge = 2147483647 --int max
+OE.huge = 2147483647 --int max, i guess
 local function loadModule(ModuleName)
     OE[ModuleName] = loadfile(string.gsub(System.getCurrentScript(),"/Main.lua","/"..ModuleName..".lua"))(OE)
 end
@@ -125,7 +127,7 @@ function OE.initWindow(Workspace)
     OE.Render.Window.eventHandler = function(_,We,...) -- Для всяких скриптов которые в потоке, и подобного стафа
         We.OE.lastEvent = {...}
         We.OE.tick()
-        if We.OE.lastEvent[1] == 'touch' or We.OE.lastEvent[1] == 'drop' or We.OE.lastEvent[1] == 'scroll' or We.OE.lastEvent[1] == 'drag' then
+        if We.OE.lastEvent[1] == 'touch' or We.OE.lastEvent[1] == 'drop' or We.OE.lastEvent[1] == 'scroll' then
             We.OE.Render.Window:focus()
         end
     end

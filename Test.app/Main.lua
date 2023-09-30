@@ -62,6 +62,11 @@ local function button(Object)
   --obj.updateItems()
   obj.Roll()
   print('You change me!:3')
+  if b.Text.Text == 'new' then
+    obj:addToRender()
+  elseif b.Text.Text == 'remove' then
+    obj:removeFromRender()
+  end
   obj.Components[a1].Color.First = math.random(0x0,0xFFFFFF)
   obj.Components[a1].Color.Second = math.random(0x0,0xFFFFFF)
   obj.Components[a1].Color.Third = math.random(0x0,0xFFFFFF)

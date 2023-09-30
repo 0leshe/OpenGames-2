@@ -67,6 +67,9 @@ local function removeObject(Object)
 end
 local function setRenderMode(Object,Mode)
     local modes = OE.Render.renderTypes
+    if OE.CurrentScene.RenderObjects[Object.ID] then
+        Object:removeFromRender()
+    end
     if Mode == modes.BUTTON then
         Object.onTouch = function() GUI.alert("Meaw-meaw") end
         Object.ButtonType = OE.Render.ButtonTypes.Default
@@ -137,19 +140,23 @@ function OE.exit()
 end
 function OE.tick()
     for i,v in  pairs(OE.Script.ExecutableForFrame) do
-        System.call(v.Script.Update,v.objectThatCalls,OE)
+        if v.objectThatCalls.Enabled == true then
+            System.call(v.Script.Update,v.objectThatCalls,OE)
+        end
     end
 end
 function OE.emptyObject()
     return {Transform = {Position = {x = 0, y = 0}, Scale = {Width = 0, Height = 0}},
     ID = math.random(0,OE.huge),
     addToRender = OE.Render.addToRender,
+    removeFromRender = OE.Render.removeFromRender,
     getComponent = OE.Component.getComponent,
     getComponentID = OE.Component.getComponentID,
     downRenderOrder = OE.Render.downRenderOrder,
     upRenderOrder = OE.Render.upRenderOrder,
     toTopRenderOrder = OE.Render.toTopRenderOrder,
     setRenderMode = setRenderMode,
+    Enabled = true,
     Components = {},
     remove = removeObject,
     addComponent = OE.Component.createComponent}

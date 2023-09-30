@@ -5,11 +5,12 @@ Component.componentTypes = {
     SCRIPT = 1,
     SPRITE = 2,
     TEXT = 3,
-    MATERIAL = 4
+    MATERIAL = 4,
+    BOXCOLIDER = 5
 }
 function Component.getComponent(Object,Type)
     for i, v in pairs(Object.Components) do
-        if Object.Components[i].type == Type then
+        if Object.Components[i].type == Type and Object.Components[i].Enabled == true then
             return v
         end
     end
@@ -23,6 +24,7 @@ function Component.createComponent(Object,ComponentType)
         Object.Components[ID] = {
             type = Component.componentTypes.SCRIPT,
             ID = ID,
+            Enabled = true,
             called = false,
             file = "",
             preVars={}
@@ -31,6 +33,7 @@ function Component.createComponent(Object,ComponentType)
         Object.Components[ID] = {
             type = Component.componentTypes.MATERIAL,
             ID = ID,
+            Enabled = true,
             Color = {
                 First = 0x0,
                 Second = 0x0,
@@ -43,6 +46,7 @@ function Component.createComponent(Object,ComponentType)
         Object.Components[ID] = {
             type = Component.componentTypes.TEXT,
             ID = ID,
+            Enabled = true,
             Text = {
             Text  = "Hello World!",
             PlaceHolder = "Place Holder",
@@ -53,7 +57,21 @@ function Component.createComponent(Object,ComponentType)
         Object.Components[ID] = {
             type = Component.componentTypes.SPRITE,
             ID = ID,
+            Enabled = true,
             file = ''
+        }
+    elseif ComponentType == Component.componentTypes.BOXCOLIDER then
+        Object.Components[ID] = {
+            type = Component.componentTypes.BOXCOLIDER,
+            ID = ID,
+            Enabled = true,
+            isTrigger = false,
+            offsets = {
+                x = 0,
+                y = 0,
+                Width = 0,
+                Hiehgt = 0
+            }
         }
     end
     return ID

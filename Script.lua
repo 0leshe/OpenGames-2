@@ -46,7 +46,7 @@ function Scripts.Reload()
     end
     for i,v in pairs(OE.CurrentScene.Objects) do
         for e,w in pairs(v.Components) do
-            if w.type == OE.Component.componentTypes.SCRIPT then
+            if w.type == OE.Component.componentTypes.SCRIPT and v.Enabled == true then
                 Scripts.Execute(OE.Storage.getFile(w.file),v)
             end
         end

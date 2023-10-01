@@ -59,7 +59,7 @@ end
 local function removeObject(Object)
     OE.Render.removeFromRender(Object)
     for i = 1, #OE.Script.ExecutableForFrame do
-        if OE.Script.ExecutableForFrame.objectThatCalls.ID == Object.ID then
+        if OE.Script.ExecutableForFrame[i].objectThatCalls.ID == Object.ID then
             table.remove(OE.Script.ExecutableForFrame,i)
         end
     end

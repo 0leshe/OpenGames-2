@@ -258,12 +258,17 @@ function Render.addToRender(Object)
           Object = setmetatable(Object, {
               __index = function(self, k)
                 if k == 'Enabled' then
-                  return not UI.hidden
+                  print(UI.hidden)
+                  if not UI.hidden then
+                    return false
+                  else
+                    return true
+                  end
                 end
               end,
               __newindex = function(self, k, v)
                 if k == 'Enabled' then
-                  UI.UI.hidden = v
+                  UI.hidden = v
                 end
               end
           })

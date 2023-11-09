@@ -258,12 +258,7 @@ function Render.addToRender(Object)
           Object = setmetatable(Object, {
               __index = function(self, k)
                 if k == 'Enabled' then
-                  print(UI.hidden)
-                  if not UI.hidden then
-                    return false
-                  else
-                    return true
-                  end
+                  return not UI.hidden
                 end
               end,
               __newindex = function(self, k, v)
@@ -289,9 +284,9 @@ function Render.addToRender(Object)
                       -- algo of thing that will calc colide
                     end
                   end
-                  UI.localX = v
+                  UI.localX = math.ceil(v)
                 elseif k == 'y' then
-                  UI.localY = v
+                  UI.localY = math.ceil(v)
                 end
               end
             })

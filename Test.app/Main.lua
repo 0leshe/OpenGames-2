@@ -5,13 +5,6 @@ end
 loadModule()
 local function start()
 end
-local function update(...)
-  --local args = {...}
- -- if type(args[2].lastEvent[4]) == "number" then
-   --args[1].Transform.Position.x = args[2].lastEvent[3]-math.ceil(args[1].Transform.Scale.Width/2)-args[2].Render.Window.x
-    --args[1].Transform.Position.y = args[2].lastEvent[4]-math.ceil(args[1].Transform.Scale.Height/2)-args[2].Render.Window.y
-  --end
-end
 OE.Storage.createFile(OE.CurrentScene.Storage,'Test.pic',require("Image").load('/Icons/HDD.pic'))
 OE.Project.Window.Color = 0x202020
 OE.Project.Window.Width = 160
@@ -56,7 +49,7 @@ obj1.Transform.Position.x = 10
 obj1.Transform.Position.y = 20
 obj1.Transform.Scale.Width = 20
 obj1.Transform.Scale.Height = 3
---obj.Components[obj:addComponent(OE.Component.componentTypes.SCRIPT)].file = "Test.lua"
+obj.Components[obj:addComponent(OE.Component.componentTypes.SCRIPT)].file = "Test.lua"
 local function button(Object)
   --obj.addItem(b.Text.Text,OE.Script.getMethod('choosedItem')[1])
   --obj.updateItems()
@@ -77,6 +70,22 @@ local function choosedItem(Item)
   print(Item.name)
 end
 OE.CurrentScene.Storage.test = {}
+local function update(...)
+  local args = {...}
+  args[1].Transform.Position.x = args[1].Transform.Position.x + 60 * args[2].deltaTime
+  if  args[1].Transform.Position.x > 160 then
+     args[1].Transform.Position.x = -2
+  end
+  obj1.Transform.Position.x = obj1.Transform.Position.x + 60 * args[2].deltaTime
+  if  obj1.Transform.Position.x > 160 then
+     obj1.Transform.Position.x = -20
+  end
+  b.Text.Text = tostring(args[2].deltaTime)
+ -- if type(args[2].lastEvent[4]) == "number" then
+ --  args[1].Transform.Position.x = args[2].lastEvent[3]-math.ceil(args[1].Transform.Scale.Width/2)-args[2].Render.Window.x
+  --  args[1].Transform.Position.y = args[2].lastEvent[4]-math.ceil(args[1].Transform.Scale.Height/2)-args[2].Render.Window.y
+ -- end
+end
 OE.Storage.createFile(OE.CurrentScene.Storage.test,'Test.lua',{choosedItem = choosedItem,Start=start,Update=update,button=button})
 OE.Script.Reload()
 --obj.addItem('Test',OE.Script.getMethod('choosedItem')[1])

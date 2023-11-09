@@ -3,7 +3,14 @@ local System = require("System")
 local fs = require("FileSystem")
 local wasInited
 local UserData = System.getUserSettings()
+local allocatedBuffer = require("component").gpu.allocateBuffer()
+require("component").gpu.setActiveBuffer(allocatedBuffer)
+local timeWas = os.clock()
+local startTime = os.clock()
 local OE = {
+    deltaTime = 0,
+    timeElapsed = 0,
+    frames = 0,
     Project = {
         Storage = {},
         Name="EmptyProject",
@@ -127,23 +134,49 @@ function OE.initWindow(Workspace)
     end
     OE.Render.Workspace = OE.Render.Window:addChild(GUI.container(1,2,OE.Render.Window.width,OE.Render.Window.height-1))
     OE.Render.Window.OE = OE
+    OE.Render.Window.actionButtons.close.onTouch = function()
+        OE.exit()
+    end
+    OE.Render.Window.actionButtons.minimize.onTouch = function()
+        require("component").gpu.setActiveBuffer(0)
+        OE.Render.Window:minimize()
+    end
+    local fps = OE.Render.Window:addChild(GUI.text(1,2,0xFFFFFF,''))
+    local was = os.clock()
     OE.Render.Window.eventHandler = function(_,We,...) -- Для всяких скриптов которые в потоке, и подобного стафа
         We.OE.lastEvent = {...}
-        We.OE.tick()
         if We.OE.lastEvent[1] == 'touch' or We.OE.lastEvent[1] == 'drop' or We.OE.lastEvent[1] == 'scroll' then
             We.OE.Render.Window:focus()
+            require("component").gpu.setActiveBuffer(allocatedBuffer)
+        end
+        We.OE.tick()
+        if was < os.clock() then
+            fps.text = tostring(OE.frames)
+            OE.frames = 0
+            was = os.clock() + 1
         end
     end
 end
 function OE.exit()
     OE.Render.Window:remove()
+    require("component").gpu.setActiveBuffer(0)
 end
 function OE.tick()
+    OE.timeElapsed = os.clock() - startTime
+    OE.frames = OE.frames + 1
     for i,v in  pairs(OE.Script.ExecutableForFrame) do
-        if v.objectThatCalls.Enabled == true then
+        if tonumber(i) > 0 then
+            if v.objectThatCalls.Enabled then
+                System.call(v.Script.Update,v.objectThatCalls,OE)
+            end
+        else
             System.call(v.Script.Update,v.objectThatCalls,OE)
         end
     end
+    System.getWorkspace():draw(true)
+    OE.deltaTime = os.clock() - timeWas
+    timeWas = os.clock()
+    require("component").gpu.bitblt()
 end
 function OE.emptyObject()
     return {Transform = {Position = {x = 0, y = 0}, Scale = {Width = 0, Height = 0}},

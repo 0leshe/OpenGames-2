@@ -33,7 +33,7 @@ function Scripts.getMethod(what)
     findMethondPls(OE.CurrentScene.Storage,what,toend)
     findMethondPls(OE.Project.Storage,what,toend)
     if not toend[1] then
-        toend[1] = function() print('There is no method founded: '..what) end
+        toend[1] = function() print('There is no method founded: '..what) return false end
     end
     return toend
 end
@@ -46,7 +46,7 @@ function Scripts.Reload()
     end
     for i,v in pairs(OE.CurrentScene.Objects) do
         for e,w in pairs(v.Components) do
-            if w.type == OE.Component.componentTypes.SCRIPT and v.Enabled == true then
+            if w.type == OE.Component.componentTypes.SCRIPT and v.Enabled and w.Enabled then
                 Scripts.Execute(OE.Storage.getFile(w.file),v)
             end
         end

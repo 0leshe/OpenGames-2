@@ -74,6 +74,10 @@ function Component.createComponent(Object,ComponentType)
             }
         }
     end
-    return ID
+    if Object.Components[ID] then
+        return ID
+    else
+        return false
+    end
 end
 return Component

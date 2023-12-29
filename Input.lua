@@ -5,7 +5,7 @@ local args = {...}
 local OE = args[1]
 
 function Input.getButton(key)
-    return kb.getKey(key)
+    return kb.isKeyDown(key)
 end
 
 function Input.getButtonDown(key)
@@ -83,6 +83,7 @@ OE.keyCode = {
     down = 208,
     right = 205,
     left = 203,
+    floatLine = 41
 }
 
 return Input

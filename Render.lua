@@ -92,7 +92,7 @@ end
 function Render.toTopRenderOrder(Object)
     return OE.CurrentScene.RenderObjects[Object.ID]:moveToFront()
 end
-function Render.addToRender(Object)
+function Render.addToRender(Object, ...)
   if OE.CurrentScene.RenderObjects[Object.ID] then
     return false, 'Object alr exists'
   end
@@ -239,11 +239,7 @@ function Render.addToRender(Object)
           Position.y,
           Scale.Width,
           Scale.Height,
-          Color.First,
-          Color.Second,
-          Color.Third,
-          Color.Fourth,
-          Color.Fiveth,
+          ...,
           loadText(text,false),
           loadText(text,true)
       ))
@@ -347,7 +343,7 @@ function Render.addToRender(Object)
               })
         
               --               MATERIAL
-        
+            local moves = {['First']={[""+renderMode.INPUT] = function() return return colors.default.background end}}
              material.Color = setmetatable({}, {
               __index = function(self, k)
                 if k == 'First' then
@@ -473,5 +469,6 @@ function Render.addToRender(Object)
               end
             })
         end
+    return OE.CurrentScene.RenderObjects[Object.ID] or false
 end
 return Render

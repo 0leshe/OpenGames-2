@@ -1,22 +1,32 @@
 local GUI = require("GUI")
 local System = require("System")
 local fs = require("FileSystem")
+local Event = require("Event")
+local text = require("Text")
+local Screen = require("Screen")
+local gpu = require("Component").gpu
 local wasInited
 local UserData = System.getUserSettings()
-local allocatedBuffer = require("component").gpu.allocateBuffer()
-require("component").gpu.setActiveBuffer(allocatedBuffer)
 local timeWas = os.clock()
 local startTime = os.clock()
+local wasOpenCommand = false
+local commandWindow
+local args = {...}
+local allocatedBuffer
 local OE = {
-    deltaTime = 0,
-    timeElapsed = 0,
+    Time = {
+        deltaTime = 0,
+        timeElapsed = 0
+    },
+    version = "0.2b",
+    maxFPS = 60,
     frames = 0,
     Project = {
         Storage = {},
         Name="EmptyProject",
         IconFile = false, -- file name
         FirstScene = 'Empty',
-        Window = {Width = 50, Height = 20, Color = 0xAAAAAA, Title = "Empty"},
+        Window = {Color = 0x303030},
         Localization = {['Russian']={}},
         Scenes = {
             ["Empty"] = {
@@ -31,15 +41,9 @@ local OE = {
     }
 }
 OE.Project.Scenes['Empty'].Localization[UserData.localizationLanguage] = {}
-OE.Debug = {
-    Log = function(str)
-        OE.Debug.LogString = OE.Debug.LogString .. "\n" .. str
-    end,
-    LogString = ""
-}
 OE.huge = 2147483647 --int max, i guess
 local function loadModule(ModuleName)
-    OE[ModuleName] = loadfile(string.gsub(System.getCurrentScript(),"/Main.lua","/"..ModuleName..".lua"))(OE)
+    OE[ModuleName] = assert(loadfile(string.gsub(System.getCurrentScript(),"/Main.lua","/"..ModuleName..".lua")))(OE)
 end
 loadModule("Render")
 loadModule("Script")
@@ -64,13 +68,13 @@ function OE.deepcopy(orig) -- For 'load scene'
     return copy
 end
 local function removeObject(Object)
-    OE.Render.removeFromRender(Object)
+    Object:removeFromRender()
     for i = 1, #OE.Script.ExecutableForFrame do
         if OE.Script.ExecutableForFrame[i].objectThatCalls.ID == Object.ID then
             table.remove(OE.Script.ExecutableForFrame,i)
         end
     end
-    table.remove(OE.CurrentScene,Object.ID)
+    OE.CurrentScene[Object.ID] = nil
 end
 local function setRenderMode(Object,Mode)
     local modes = OE.Render.renderTypes
@@ -114,69 +118,125 @@ local function setRenderMode(Object,Mode)
 end
 function OE.initWindow(Workspace)
     if wasInited then
-        OE.Render.Window:remove()
+        OE.Render.Window = nil
     else
         wasInited = true
     end
-    _, OE.Render.Window, OE.Render.Menu = System.addWindow(Workspace or GUI.titledWindow(
-        1,
-        1,
-        OE.Project.Window.Width,
-        OE.Project.Window.Height,
-        OE.Project.Window.Title,
-        true
-        )
-    )
-    OE.Render.Window.backgroundPanel.colors.background = OE.Project.Window.Color
-    OE.Render.Window.titleLabel.text = OE.Project.Window.Title
-    if not Workspace then
-        OE.Render.Window.backgroundPanel.color = OE.Project.Window.Color
-    end
-    OE.Render.Workspace = OE.Render.Window:addChild(GUI.container(1,2,OE.Render.Window.width,OE.Render.Window.height-1))
+    OE.Render.Window = GUI.workspace()
+    OE.Render.Window:addChild(GUI.panel(1,1,160,50,OE.Project.Window.Color))
+    OE.Render.Workspace = OE.Render.Window:addChild(GUI.container(1,1,160,50))
     OE.Render.Window.OE = OE
-    OE.Render.Window.actionButtons.close.onTouch = function()
-        OE.exit()
-    end
-    OE.Render.Window.actionButtons.minimize.onTouch = function()
-        require("component").gpu.setActiveBuffer(0)
-        OE.Render.Window:minimize()
-    end
-    local fps = OE.Render.Window:addChild(GUI.text(1,2,0xFFFFFF,''))
+    local fps = OE.Render.Window:addChild(GUI.text(1,1,0xFFFFFF,''))
     local was = os.clock()
-    OE.Render.Window.eventHandler = function(_,We,...) -- Для всяких скриптов которые в потоке, и подобного стафа
-        We.OE.lastEvent = {...}
-        if We.OE.lastEvent[1] == 'touch' or We.OE.lastEvent[1] == 'drop' or We.OE.lastEvent[1] == 'scroll' then
-            We.OE.Render.Window:focus()
-            require("component").gpu.setActiveBuffer(allocatedBuffer)
+    commandWindow = OE.Render.Window:addChild(GUI.titledWindow(70,5,80,25,"OE2 command window",true))
+    commandWindow.hidden = true
+    commandWindow.actionButtons:remove()
+    commandWindow.backgroundPanel.colors.background = 0x303030
+    commandWindow.titleLabel.colors.text = 0x404040
+    commandWindow.titlePanel.colors.background = 0x202020
+    local commandWindowLines = commandWindow:addChild(GUI.textBox(1,3,78,19,0x303030, 0x909090, {},1,2,0))
+    commandWindow.print = function(...)
+        local args = {...}
+        local color = 0x909090
+        if args[1] == false then
+            color = 0xBB0000
         end
+        local recursive
+        local maxRecusive = 10
+        local function serialize(tbl,Index)
+            recursive = recursive + 1
+            if recursive <= maxRecusive then
+                if Index then
+                    table.insert(commandWindowLines.lines,{text=string.rep("   ",recursive).."InTable: " .. Index,color=color})
+                    commandWindowLines:scrollDown()
+                end
+                for i,v in pairs(tbl) do
+                    i = '["' ..i .. '"]'
+                    if type(v) == "table" then
+                        if v == tbl then
+                            table.insert(commandWindowLines.lines,{text=string.rep("   ",recursive+1) .. "Recursion on main table",color=0xAAAA00})
+                            commandWindowLines:scrollDown()
+                        else
+                            serialize(v,i)
+                            recursive = recursive - 1
+                        end
+                    else
+                        for _, w in pairs(text.wrap(i .." = " .. tostring(v),78)) do
+                            table.insert(commandWindowLines.lines,{text=string.rep("   ",recursive+1) .. w,color=color})
+                            commandWindowLines:scrollDown()
+                        end
+                    end
+                end
+            end
+        end
+        for i = 2, #args do
+            if type(args[i]) == "table" then
+                recursive = -1
+                serialize(args[i],"_RETURN" .. tostring(i-1))
+            else
+                for _, v in pairs(text.wrap(tostring(args[i]),78)) do
+                    table.insert(commandWindowLines.lines,{text=v,color=color})
+                    commandWindowLines:scrollDown()
+                end
+            end
+        end
+    end
+    commandWindow:addChild(GUI.input(1,23,80,3,0x505050, 0x202020,0x202020, 0x505050, 0x202020, "local args = {...} return args[1].", "> Command")).onInputFinished = function(_,we)
+        commandWindow.print(pcall(function() return load(we.text)(OE) end))
+    end
+    OE.Render.Window.eventHandler = function(_,We,...) -- For scripts that in thread, and stuff like that
+        We.OE.lastEvent = {...}
         We.OE.tick()
         if was < os.clock() then
             fps.text = tostring(OE.frames)
+            OE.prevFPS = OE.frames
             OE.frames = 0
             was = os.clock() + 1
         end
-    end
-end
-function OE.exit()
-    OE.Render.Window:remove()
-    require("component").gpu.setActiveBuffer(0)
-end
-function OE.tick()
-    OE.timeElapsed = os.clock() - startTime
-    OE.frames = OE.frames + 1
-    for i,v in  pairs(OE.Script.ExecutableForFrame) do
-        if tonumber(i) > 0 then
-            if v.objectThatCalls.Enabled then
-                System.call(v.Script.Update,v.objectThatCalls,OE)
+        if OE.Input.getButtonUp(OE.keyCode.floatLine) then
+            if not wasOpenCommand then
+                wasOpenCommand = true
+                commandWindow.hidden = false
+            else
+                wasOpenCommand = false
+                commandWindow.hidden = true
             end
-        else
-            System.call(v.Script.Update,v.objectThatCalls,OE)
+        elseif OE.Input.getButton(OE.keyCode.altLeft) and OE.Input.getButton(OE.keyCode.four) then
+            OE.exit()
         end
     end
-    System.getWorkspace():draw(true)
-    OE.deltaTime = os.clock() - timeWas
+end
+OE.Debug = {
+    Log = function(str, isErr)
+        commandWindow.print(not isErr, str)
+    end
+}
+function OE.exit()
+    if not args.GPUBuffers then 
+        gpu.freeBuffer(allocatedBuffer)
+        gpu.setActiveBuffer(0) 
+    end
+    OE.Render.Window:stop()
+    OE = nil
+end
+function OE.tick()
+    local clocks = os.clock()
+    OE.Time.timeElapsed = clocks - startTime
+    OE.frames = OE.frames + 1
+    for i,v in  pairs(OE.Script.ExecutableForFrame) do
+        if tonumber(i) >= 0 then
+            if v.objectThatCalls.Enabled then
+                assert(v.Script.Update)()
+            end
+        end
+    end
+    if not args.GPUBuffers then gpu.bitblt() end
+    OE.Time.deltaTime = clocks - timeWas
+    timeCheckpoint = clocks
+	while os.clock() < timeCheckpoint + math.max(0, 1/OE.maxFPS - OE.Time.deltaTime) do end
+    OE.Time.deltaTime = math.max(OE.Time.deltaTime,OE.Time.deltaTime + (1/OE.maxFPS -OE.Time.deltaTime))
     timeWas = os.clock()
-    require("component").gpu.bitblt()
+    OE.Render.Window:draw()
 end
 function OE.emptyObject()
     return {Transform = {Position = {x = 0, y = 0}, Scale = {Width = 0, Height = 0}},
@@ -202,16 +262,16 @@ function OE.loadScene(SceneName, dontLaunchScripts)
         OE.Render.clearRender()
         OE.Script.ExecutableForFrame = {}
     end
-    OE.CurrentScene = OE.deepcopy(OE.Project.Scenes[SceneName]) -- В проектах экземпляр сцены, после её загрузки она меняется по скрипту не зависимо от экземпляра
+    OE.CurrentScene = OE.deepcopy(OE.Project.Scenes[SceneName]) -- В проектах экземпляр сцены, после её загрузки она меняется по скриптам не зависимо от экземпляра
     for i = 1, #OE.CurrentScene.Objects do
         OE.CurrentScene.Objects[OE.CurrentScene.Objects[i].ID] = OE.deepcopy(OE.Project.Scenes[SceneName].Objects[i])
         OE.Render.addToRender(
             OE.CurrentScene.Objects[OE.CurrentScene.Objects[i].ID],
             OE.CurrentScene.Objects[i].RenderType
         )
-        if not dontLaunchScripts then
-            OE.Script.Reload()
-        end
+    end
+    if not dontLaunchScripts then
+        OE.Script.Reload()
     end
 end
 function OE.reloadScene()
@@ -225,9 +285,14 @@ function OE.createObject()
     OE.CurrentScene.Objects[object.ID] = object
     return object
 end
-local args = {...}
-if not args[1] then
+_,args = System.parseArguments(table.unpack(args))
+args.GPUBuffers = true
+if not args.withoutWindow then
     OE.initWindow()
     OE.loadScene("Empty")
+end
+if not args.GPUBuffers then
+    allocatedBuffer = gpu.allocateBuffer() -- If you have issues on this, please, update OC to 1.7.6+ version, or launch game/editor with '--GPUBuffers=ture' arg
+    gpu.setActiveBuffer(allocatedBuffer)
 end
 return OE

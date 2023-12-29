@@ -6,10 +6,6 @@ loadModule()
 local function start()
 end
 OE.Storage.createFile(OE.CurrentScene.Storage,'Test.pic',require("Image").load('/Icons/HDD.pic'))
-OE.Project.Window.Color = 0x202020
-OE.Project.Window.Width = 160
-OE.Project.Window.Height = 50
-OE.Project.Window.Title = "Test Window"
 OE.initWindow()
 local obj = OE.createObject()
 obj:setRenderMode(OE.Render.renderTypes.PROGRESSINDICATOR)
@@ -49,7 +45,8 @@ obj1.Transform.Position.x = 10
 obj1.Transform.Position.y = 20
 obj1.Transform.Scale.Width = 20
 obj1.Transform.Scale.Height = 3
-obj.Components[obj:addComponent(OE.Component.componentTypes.SCRIPT)].file = "Test.lua"
+local g = obj:addComponent(OE.Component.componentTypes.SCRIPT)
+obj.Components[g].file = "Test.lua"
 local function button(Object)
   --obj.addItem(b.Text.Text,OE.Script.getMethod('choosedItem')[1])
   --obj.updateItems()
@@ -72,7 +69,7 @@ end
 OE.CurrentScene.Storage.test = {}
 local function update(...)
   local args = {...}
-  args[1].Transform.Position.x = args[1].Transform.Position.x + 60 * args[2].deltaTime
+  args[1].Transform.Position.x = args[1].Transform.Position.x + 80 * args[2].deltaTime
   if  args[1].Transform.Position.x > 160 then
      args[1].Transform.Position.x = -2
   end
@@ -86,8 +83,26 @@ local function update(...)
   --  args[1].Transform.Position.y = args[2].lastEvent[4]-math.ceil(args[1].Transform.Scale.Height/2)-args[2].Render.Window.y
  -- end
 end
-OE.Storage.createFile(OE.CurrentScene.Storage.test,'Test.lua',{choosedItem = choosedItem,Start=start,Update=update,button=button})
+OE.Storage.createFile(OE.CurrentScene.Storage.test,'Test.lua',[[
+b = {}
+obj1Tranform = {}
+speed = 80
+function Update()
+    local obj1TranformPosition = obj1Tranform.Position
+    Transform.Position.x = Transform.Position.x + speed * Time.deltaTime
+    if Transform.Position.x > 160 then
+        Transform.Position.x = -2
+    end
+    obj1TranformPosition.x = obj1TranformPosition.x + 60 * Time.deltaTime
+    if obj1TranformPosition.x > 160 then
+        obj1TranformPosition.x = -20
+    end
+    b.Text.Text = tostring(Time.deltaTime)
+end
+]])
 OE.Script.Reload()
+obj.Components[g].Script.b = b
+obj.Components[g].Script.obj1Tranform = obj1.Transform
 --obj.addItem('Test',OE.Script.getMethod('choosedItem')[1])
 --obj.addItem('Tt',OE.Script.getMethod('choosedItem')[1])
 --obj.addItem('Tjj',OE.Script.getMethod('choosedItem')[1])
@@ -95,3 +110,4 @@ OE.Script.Reload()
 obj1.onInputFinished = OE.Script.getMethod('button')[1]
 obj1:addToRender()
 obj:addToRender()
+OE.Render.Window:start(0)

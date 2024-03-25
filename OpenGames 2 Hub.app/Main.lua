@@ -73,7 +73,7 @@ local function reloadInfo()
     infoPanel:addChild(GUI.text(2,2,getColor(3),lc.infoAbtProject))
     infoPanel:addChild(GUI.text(2,3,getColor(3),lc.Name .. ': '..proj.Name))
     infoPanel:addChild(GUI.text(2,4,getColor(3),lc.Size .. ': '..fs.size(UserData.OpenGames.Projects[ChoosedProject])))
-    infoPanel:addChild(GUI.text(2,5,getColor(3),lc.lastModified .. ': '..os.date("%Y.%m.%d %H:%M",fs.lastModified(fs.removeSlashes(UserData.OpenGames.Projects[ChoosedProject])..'/.Game.dat'))))
+    infoPanel:addChild(GUI.text(2,5,getColor(3),lc.lastModified .. ': '..os.date("%Y.%m.%d %H:%M",fs.lastModified(fs.removeSlashes(UserData.OpenGames.Projects[ChoosedProject])..'/.Game.dat'))/72))
     local scenesCount = 0
     local cnt = 0
     local storageCount = 0

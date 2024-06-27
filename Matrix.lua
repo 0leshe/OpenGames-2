@@ -1,26 +1,24 @@
-local master = {zonesRender = {zones = {}},objects = {},objectsID = {}}
+local master = {objects = {},allocatedBuffer,objectsID = {}}
 local nilFunction = function() end
 local screenUpdate,setDrawLimit = nilFunction, nilFunction
-local debug = false
 local gpu = require('component').gpu
 local queueIndex,queueBuffer = {}, {}
 local objects, objectsID = master.objects, master.objectsID
 local args = {...}
-local currentRender, allocatedBuffer = "perObject"
+local currentRender = "perObject"
 local timerFPS = os.clock()
 local fpsTotal, fps = 0, 0
+local debugInfo = {0,0,0,0,'nil'}
 if args[2] then
-  allocatedBuffer = gpu.allocateBuffer()
-  gpu.setActiveBuffer(allocatedBuffer)
+  master.allocatedBuffer = gpu.allocateBuffer()
+  gpu.setActiveBuffer(master.allocatedBuffer)
 end
 if not args[3] then
     local screen = require('screen')
     setDrawLimit = screen.setDrawLimit
     screenUpdate = screen.update
 end
-if args[4] then
-    debug = true
-end
+local debug = args[4]
 local function colide(a,b)
     local x,y = a.x,a.y
     local x1,y1 = b.x,b.y
@@ -40,7 +38,6 @@ local function deepcopy(orig)
     end
     return copy
 end
-local debugInfo = {0,0,0,0,'nil'}
 local function colidesWith(object)
     local colides = {}
     for i = 1,object.index-1 do
@@ -120,14 +117,6 @@ function master.changeRender(mode)
     end
 end
 master.changeRender(args[1])
-local zonesRender = master.zonesRender
-function zonesRender.addZone(zone) 
-    local index = #zonesRender.zones+1
-    table.insert(zonesRender.zones,{index = index,x=zone.x,y=zone.y,w=zone.w+zone.x-1,h=zone.h+zone.y-1})
-end
-function zonesRender.removeZone(index)
-    table.remove(zonesRender.zones,index)
-end
 function master.addQueue(obj)
   queueIndex[obj.id] = true
   obj.changed = true
@@ -173,8 +162,16 @@ local function addObject(obj)
 end
 local transformRelated = {x=0,y=0,w=0,h=0}
 function master.newObject(x,y,w,h,draw)
-  local object = {x=x,y=y,w=w,h=h,colides={},draw=draw,id=math.random(0,9999999),remove = function() 
-        object = nil
+    local object = {x=x,y=y,w=w,h=h,colides={},draw=draw,id=math.random(0,9999999),
+    setIndex = function(me,newIndex) 
+        table.insert(objects,newIndex,me)
+        table.remove(objects,me.index)
+        me.index = newIndex
+    end,
+    remove = function(me) 
+        table.remove(objects,me.index)
+        objectsID[me.ID] = nil
+        me = nil
     end}
    local object = addObject(setmetatable({},{
         __newindex = function(self,k,v)

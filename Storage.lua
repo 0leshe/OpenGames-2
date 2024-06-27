@@ -1,60 +1,45 @@
 local fs = require("Filesystem")
-local image = require("Image")
-local Storage = {}
+local Storage = {intensity = 2}
+local MAIN_scripts = string.gsub(require'System'.getCurrentScript(),'Storage.lua','MAIN_scripts/')
 local args = {...}
 local OE = args[1]
-
-local function getFile(where,filename,canNotRecursive)
-    for i,v in pairs(where) do
-        if i == filename then
-            return v
-        end
-        if type(v) == "table" and not canNotRecursive then
-            local tmp = getFile(v,filename)
-            if tmp then
-                return tmp
-            end
-        end
+local loaded = setmetatable({},{__index = function(me,k) return me[k] end,
+__newindex = function(me,k,v) 
+    if not me[k].lock then
+        me[k] = v
     end
-end
-function Storage.getCurrentSceneStorage()
-    return OE.CurrentScene.Storage
-end
-function Storage.getSceneStorage(name)
-    return OE.Project.Scenes[name].Storage
-end
-function Storage.getProjectStorage()
-    return OE.Project.Storage
-end
-function Storage.createFile(where, FileName, Data)
-    where[FileName] = Data
+end})
+local storage = OE.Project.Storage
+
+
+function Storage.createFile(name, data)
+    storage[name] = data
 end
 function Storage.Export(path,what)
-    fs.write(path,what)
+    fs.write(path,loaded[what])
 end
-function Storage.Import(toWhere, path)
-    if fs.name(path):match("[^%/]+(%.[^%/]+)%/?$") == '.pic' then
-        toWhere[fs.name(path)] = image.toString(image.load(path))
-    else
-        toWhere[fs.name(path)] = fs.read(path)
+function Storage.Import(name, path)
+    storage[name] = path
+end
+function Storage.loadFile(name,lock)
+    loaded[name] = {file=fs.read(name), lock = not not lock}
+    return loaded[name]
+end
+function Storage.unloadFile(name)
+    loaded[name] = nil
+end
+function Storage.getFile(name)
+    local file = loaded[name].file or loadFile(name)
+    if Storage.intensity < 2 then
+        Storage.unloadFile(name)
     end
+    return file
 end
-function Storage.createFolder(toWhere, name)
-	toWhere[name] = {}
-end
-function Storage.loadImage(path)
-    return require("Image").fromString(path)
-end
-function Storage.getFileByName(FileName)
-    local idk = getFile(OE.CurrentScene.Storage, FileName)
-    if idk then
-        return idk
-    else
-        return getFile(OE.Project.Storage,FileName)
-    end
-end
-function Storage.getFile(where, name)
-    getFile(where,name,true)
+
+local engineScriptsFiles = fs.list(MAIN_scripts)
+
+for i = 1, #engineScriptsFiles do
+    Storage.Import('MAIN_'..engineScriptsFiles[i],MAIN_scripts..engineScriptsFiles[i], true)
 end
 
 return Storage

@@ -8,5 +8,5 @@
     continue = 'Continue',
     installer = 'Installer',
     explore = "Show",
-    choosePath = "Choose path where applciation will be installed."
+    choosePath = "Choose path, where applciation will be installed."
 }

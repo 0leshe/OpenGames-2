@@ -1,7 +1,5 @@
 local GUI = require('GUI')
-local Paths = require('Paths')
-local Image = require('Image')
-local fs = require('FileSystem')
+local fs = require('Filesystem')
 local System = require('System')
 local uni = require('Unicode')
 local lc = System.getCurrentScriptLocalization()
@@ -59,7 +57,7 @@ win.titlePanel.colors.background = getColor(2)
 win.titleLabel.colors.text = getColor(3)
 
 local function readProject(path)
-    return fs.readTable(fs.removeSlashes(path..'/.Game.dat'))
+   return fs.readTable(fs.removeSlashes(path .. '/Game.dat'))
 end
 
 local infoPanel
@@ -73,7 +71,7 @@ local function reloadInfo()
     infoPanel:addChild(GUI.text(2,2,getColor(3),lc.infoAbtProject))
     infoPanel:addChild(GUI.text(2,3,getColor(3),lc.Name .. ': '..proj.Name))
     infoPanel:addChild(GUI.text(2,4,getColor(3),lc.Size .. ': '..fs.size(UserData.OpenGames.Projects[ChoosedProject])))
-    infoPanel:addChild(GUI.text(2,5,getColor(3),lc.lastModified .. ': '..os.date("%Y.%m.%d %H:%M",fs.lastModified(fs.removeSlashes(UserData.OpenGames.Projects[ChoosedProject])..'/.Game.dat'))/72))
+    infoPanel:addChild(GUI.text(2,5,getColor(3),lc.lastModified .. ': '..os.date("%Y.%m.%d %H:%M",fs.lastModified(fs.removeSlashes(UserData.OpenGames.Projects[ChoosedProject]..'/Game.dat'))/72)))
     local scenesCount = 0
     local cnt = 0
     local storageCount = 0
@@ -126,12 +124,11 @@ local function projectPanel(i)
     BGpanel:addChild(GUI.panel(1,1,40+bonus,7,getColor(1))) -- Project Panel bg
     BGpanel:addChild(GUI.text(2,2,getColor(3),readProject(projectPath).Name)) -- Project line
     BGpanel:addChild(GUI.text(2,4,getColor(3),projectPath)) -- Project line
-    local tmp = BGpanel:addChild(GUI.button(2,6,38+bonus,1,getColor(2),getColor(3),getColor(3),getColor(2),' '))
-    BGpanel.index = i
-    tmp.onTouch = function() -- Middle Line
+    BGpanel:addChild(GUI.button(2,6,38+bonus,1,getColor(2),getColor(3),getColor(3),getColor(2),' ')).onTouch = function() -- Project #3461, i choose you!
         ChoosedProject = BGpanel.index or 1
         reloadInfo()
     end
+    BGpanel.index = i
     return BGpanel
 end
 local hintCreateNewProject
@@ -169,7 +166,9 @@ deleteProject.onTouch = function()
         end
         if #UserData.OpenGames.Projects <= 4 then
             projectsLists.localY = 1
-            scrollProject:remove()
+            if scrollProject.remove then
+                scrollProject:remove()
+            end
             scrollProject = {hidden = true}
         end
     end
@@ -223,7 +222,7 @@ newProject.onTouch = function()
                 proj.Name = projectName.text
                 crutyolka:roll()
                 wk:draw(true)
-                fs.writeTable(fs.removeSlashes(pathinput.text..'/'..projectName.text)..'/.Game.dat',proj)
+                fs.writeTable(fs.removeSlashes(pathinput.text..'/'..projectName.text)..'/Game.dat',proj)
                 crutyolka:roll()
                 wk:draw(true)
                 UserData.OpenGames.Projects[#UserData.OpenGames.Projects+1] = fs.removeSlashes(pathinput.text..'/'..projectName.text)

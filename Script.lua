@@ -3,28 +3,15 @@ local args = {...}
 local OE = args[1]
 local sharedToken = {}
 local shared = {}
-local Scripts = {ExecutableForFrame={}}
+local Scripts = {volcab={},vars={}}
 
-function Scripts.Execute(script,objectThatCalls)
-    if script.Start then
-        System.call(script.Start)
-    end
-    if script.Update then
-        table.insert(Scripts.ExecutableForFrame,{Script = script,objectThatCalls = objectThatCalls})
-    end
-    return script
-end
-
-function Scripts.loadMethod(from,what)
-    return from[what]
-end
--- Big thanks to fingercomp bc i dont know how is this shi works
+-- Big thanks to fingercomp bc i dont know how this shi works
 local globalEnv = setmetatable({
   shared = function()
     return sharedToken
   end,
 }, {__index = _ENV})
-local function runScript(code, privateVars)
+local function runScript(code, privateVars, object)
   local vars = {}
   local sharedNames = {}
   local privateNames = {}
@@ -35,7 +22,8 @@ local function runScript(code, privateVars)
   end
   local envMeta = {
     __index = function(self, k)
-      if sharedNames[k] then
+      return sharedNames[k] and shared[k] or privateNamesVars[k] and privateVars[k] or (privateNames[k] or vars[k] ~= nil) and vars[k] or globalEnv[k]
+      --[[if sharedNames[k] then -- Оно выше, просто сжато. На спичках, да-да
         return shared[k]
       elseif privateNamesVars[k] then
         return privateVars[k]
@@ -45,7 +33,7 @@ local function runScript(code, privateVars)
         return vars[k]
       end
 
-      return globalEnv[k]
+      return globalEnv[k]]
     end,
 
     __newindex = function(self, k, v)
@@ -58,62 +46,36 @@ local function runScript(code, privateVars)
       else
         privateNames[k] = true
         vars[k] = v
+        if type(v) == 'function' then
+          Scripts.volcab[k] = Scripts.volcab[k] or {}
+          Scripts.volcab[k][v] = object
+        end
       end
     end,
   }
 
-  assert(load(code, "@OE_TMP_SCRIPT_EXECUTION_KYS_BTW.lua", "t", setmetatable({}, envMeta)))()
-
+  assert(load(code, "@OE_TMP_SCRIPT_EXECUTION.lua", "t", setmetatable({}, envMeta)))()
   return vars
 end
--- Yeah, that all was fingercomp, lady and gentelmans! Cool guy
-function Scripts.Compile(code, vars, addToExecuteForFrame)
-    local vars = vars or {}
-    local code = runScript(code, vars)
-    if addToExecuteForFrame then
-        Scripts.Execute(code)
-    end
-    return code
-end
-function Scripts.CompileScript(object, str, addToExecuteForFrame)
-    return Scripts.Compile(str, {Transform = object.Transform, GameObject = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, keyCodes = OE.keyCodes, Time = OE.Time}, addToExecuteForFrame)
-end
 
-local function findMethondPls(where,what,toend)
-    for i,v in pairs(where) do
-        if type(v) == 'table' and i:match("[^%/]+(%.[^%/]+)%/?$") == '.lua' then
-            if v[what] then
-                table.insert(toend,1, v[what])
+function Scripts.runEveryWithName(name,object)
+    for i, v in pairs(Scripts.volcab[name]) do
+        if object then
+            if v == object then
+                i()
             end
-        elseif type(v) == 'table' and not i:match("[^%/]+(%.[^%/]+)%/?$") then
-            findMethondPls(v,what,toend)
+        else
+            i()
         end
     end
 end
 
-function Scripts.getMethod(what)
-    local toend = {}
-    findMethondPls(OE.CurrentScene.Storage,what,toend)
-    findMethondPls(OE.Project.Storage,what,toend)
-    if not toend[1] then
-        toend[1] = function() print('There is no method founded: '..what) return false end
+function Scripts.Compile(object, script, preset)
+    local script = runScript(script, {Transform = object.Transform, Object = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, Time = OE.Time}, object)
+    for i, v in pairs(preset) do
+        script[i] = v
     end
-    return toend
-end
-
-function Scripts.Reload()
-    for i,v in pairs(Scripts.ExecutableForFrame) do
-        if tonumber(i) > 0 then
-            table.remove(Scripts.ExecutableForFrame,i)
-        end
-    end
-    for i,v in pairs(OE.CurrentScene.Objects) do
-        for e,w in pairs(v.Components) do
-            if w.type == OE.Component.componentTypes.SCRIPT and v.Enabled and w.Enabled then
-                w.Script = Scripts.Execute(Scripts.CompileScript(v, OE.Storage.getFileByName(w.file)), v)
-            end
-        end
-    end
+    return script
 end
 
 return Scripts

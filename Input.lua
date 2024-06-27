@@ -1,5 +1,4 @@
 local Input = {}
-local Event = require("Event")
 local kb = require("KeyBoard")
 local args = {...}
 local OE = args[1]
@@ -9,22 +8,14 @@ function Input.getButton(key)
 end
 
 function Input.getButtonDown(key)
-    if OE.lastEvent[4] == key and OE.lastEvent[1] == "key_down" then
-        return true
-    else
-        return false
-    end
+    return (OE.lastEvent[4] == key and OE.lastEvent[1] == "key_down") and true or false
 end
 
 function Input.getButtonUp(key)
-    if OE.lastEvent[4] == key and OE.lastEvent[1] == "key_up" then
-        return true
-    else
-        return false
-    end
+    return (OE.lastEvent[4] == key and OE.lastEvent[1] == "key_up") and true or false
 end
 
-OE.keyCode = {
+Input.keyCode = {
     controlLeft = 29,
     controlRight = 157,
     shiftLeft = 42,
@@ -75,7 +66,7 @@ OE.keyCode = {
     quoteSingle = 26,
     exclamation = 27,
     enter = 28,
-    quoteOpen = 40,
+    quoteDouble = 40,
     comma = 51,
     dot = 52,
     space = 57,

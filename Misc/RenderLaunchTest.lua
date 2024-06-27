@@ -1,4 +1,4 @@
-local render = assert(loadfile(string.gsub(require('system').getCurrentScript(),"/RenderLaunchTest.lua","/RenderTest.lua")))(nil,false,true) -- Подгружаем рендер. Аргументы: 
+local render = assert(loadfile(string.gsub(require('system').getCurrentScript(),"/RenderLaunchTest.lua","/RenderTest.lua")))(nil,true,nil,true) -- Подгружаем рендер. Аргументы: 
 --Без предварительного режима рендера
 --Без буферов видеокарты. Нативные вызовы gpu будут мигать.
 --Не подгружать библиотеку screen
@@ -7,30 +7,27 @@ local screen = require('screen')
 local fps = 1
 
 local function panelRender1(obj) -- Функций рендера.
-  --screen.drawRectangle(obj.x,obj.y,obj.w,obj.h,0x989898,0x0," ")
-  gpu.setBackground(0x989898)
-  gpu.fill(obj.x,obj.y,obj.w,obj.h," ")
+  screen.drawRectangle(obj.x,obj.y,obj.w,obj.h,0x989898,0x0," ")
+  --gpu.setBackground(0x989898)
+  --gpu.fill(obj.x,obj.y,obj.w,obj.h," ")
+end
+local function initPanel()
+    local color = math.random(0x0,0xFFFFFF)
+return function(obj)
+  screen.drawRectangle(obj.x,obj.y,obj.w,obj.h,color,0x0," ")
+  --pu.setBackground(0x505050)
+  --pu.fill(obj.x,obj.y,obj.w,obj.h," ")
+end
 end
 
-local function panelRender2(obj)
-  --screen.drawRectangle(obj.x,obj.y,obj.w,obj.h,0x989898,0x0," ")
-  gpu.setBackground(0x505050)
-  gpu.fill(obj.x,obj.y,obj.w,obj.h," ")
-end
-
-local function fpsRender(obj)
-  --screen.drawText(obj.x,obj.y,0xFFFFFF,0x0,tostring(fps).."   ")
-  gpu.setBackground(0x989898)
-  gpu.setForeground(0xFFFFFF)
-  gpu.set(obj.x,obj.y,tostring(fps).."   ")
-end
 
 render.newObject(1,1,160,50,panelRender1) -- Создаём новые объекты на экране. Координаты и размер контейнера, а так-же функция отрисовки.
-render.newObject(1,2,20,10,panelRender2) -- 2 панели..
-render.newObject(1,1,4,1,fpsRender) -- И счётчик fps
+render.newObject(1,2,20,10,initPanel()) -- 2 панели..
+for i = 1, 48 do
+    render.newObject(math.random(1,150),math.random(1,50),20,10,initPanel())
+end
 
 local wk = require("GUI").workspace()
-local timerFPS = os.clock()
 
 wk.eventHandler = function(_,_,...) -- Для обрабтки нас, и отрисовки картинки
   local events = {...}
@@ -38,15 +35,15 @@ wk.eventHandler = function(_,_,...) -- Для обрабтки нас, и отр
     render.objects[2].y = math.ceil(events[4])
     render.objects[2].x = math.ceil(events[3])
   end
+  --[[for i = 3, 50 do
+    render.objects[i].x = render.objects[i].x + 10
+    if render.objects[i].x > 160 then
+        render.objects[i].x = -10
+    end
+  end]]
 
-  fps = fps + 1
-  render.addQueue(render.objects[3]) -- Добовляем в очередь счётчик фпс вручную, так-как контейнер не изменился, тригер не сработал. 
   --Не каждое изменение объекта может требовать его перерисовки, в теорий
-  render.process() -- Рендерим. Там происходит магия.
+  render.process(false) -- Рендерим. Там происходит магия.
 
-  if timerFPS < os.clock() then
-    timerFPS = os.clock() + 1
-     fps = 0
-  end
 end
 wk:start(0) -- На 0, если хотите без тормозов стабильную картинку

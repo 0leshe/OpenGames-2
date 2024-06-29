@@ -1,9 +1,9 @@
 local transform = {x=1,y=1,w=1,h=1}
-Position = setmetatable({}, {__index = function(k) return transform[k] end, __newindex(k, v)
+Position = setmetatable({}, {__index = transform, __newindex = function(me,k, v)
 	transform[k] = v
-	OE.Script.runEveryWithName('onObjectMove', Object)
+	OE.Script.runEveryWithName('onObjectMove', Object,transform.x,transform.y)
 end})
-Scale = setmetatable({}, {__index = function(k) return transform[k] end, __newindex(k, v)
+Scale = setmetatable({}, {__index = transform, __newindex = function(me,k, v)
 	transform[k] = v
-	OE.Script.runEveryWithName('onObjectResize', Object)
+	OE.Script.runEveryWithName('onObjectResize', Object,transform.w,transform.h)
 end})

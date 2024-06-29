@@ -3,12 +3,7 @@ local Storage = {intensity = 2}
 local MAIN_scripts = string.gsub(require'System'.getCurrentScript(),'Storage.lua','MAIN_scripts/')
 local args = {...}
 local OE = args[1]
-local loaded = setmetatable({},{__index = function(me,k) return me[k] end,
-__newindex = function(me,k,v) 
-    if not me[k].lock then
-        me[k] = v
-    end
-end})
+local loaded = {}
 local storage = OE.Project.Storage
 
 
@@ -21,15 +16,15 @@ end
 function Storage.Import(name, path)
     storage[name] = path
 end
-function Storage.loadFile(name,lock)
-    loaded[name] = {file=fs.read(name), lock = not not lock}
+function Storage.loadFile(name,data)
+    loaded[name] = data or fs.read(storage[name])
     return loaded[name]
 end
 function Storage.unloadFile(name)
     loaded[name] = nil
 end
 function Storage.getFile(name)
-    local file = loaded[name].file or loadFile(name)
+    local file = loaded[name] or Storage.loadFile(name)
     if Storage.intensity < 2 then
         Storage.unloadFile(name)
     end
@@ -39,7 +34,7 @@ end
 local engineScriptsFiles = fs.list(MAIN_scripts)
 
 for i = 1, #engineScriptsFiles do
-    Storage.Import('MAIN_'..engineScriptsFiles[i],MAIN_scripts..engineScriptsFiles[i], true)
+    Storage.Import('MAIN_'..engineScriptsFiles[i],MAIN_scripts..engineScriptsFiles[i])
 end
 
 return Storage

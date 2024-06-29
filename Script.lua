@@ -58,23 +58,35 @@ local function runScript(code, privateVars, object)
   return vars
 end
 
-function Scripts.runEveryWithName(name,object)
-    for i, v in pairs(Scripts.volcab[name]) do
-        if object then
-            if v == object then
-                i()
+function Scripts.runEveryWithName(name,object,...)
+    if Scripts.volcab[name] then
+        for i, v in pairs(Scripts.volcab[name]) do
+            if object then
+                if v == object then
+                    i(...)
+                end
+            else
+                i(...)
             end
-        else
-            i()
+        end
+    end
+end
+local function Patern(script,patern)
+    for i, v in pairs(patern) do
+        if string.sub(i,1,1) ~= '_' then
+            if type(v) == 'table' then
+                Patern(script,v)
+            else
+                script[i] = v
+            end
         end
     end
 end
 
-function Scripts.Compile(object, script, preset)
-    local script = runScript(script, {Transform = object.Transform, Object = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, Time = OE.Time}, object)
-    for i, v in pairs(preset) do
-        script[i] = v
-    end
+function Scripts.Compile(object, scriptObj, scriptName)
+    local script = runScript(OE.Storage.getFile(scriptObj._SourceFile), {Transform = object._Transform, Object = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, Time = OE.Time}, object)
+    Patern(script,scriptObj)
+    object[scriptName] = setmetatable(object[scriptName],{__index=script,__newindex=script})
     return script
 end
 

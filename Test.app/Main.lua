@@ -1,113 +1,41 @@
-local OE = {}
-local function loadModule()
-  OE = loadfile("/OpenGames 2/Main.lua")()
-end
-loadModule()
-local function start()
-end
-OE.Storage.createFile(OE.CurrentScene.Storage,'Test.pic',require("Image").load('/Icons/HDD.pic'))
-OE.initWindow()
-local obj = OE.createObject()
-obj:setRenderMode(OE.Render.renderTypes.PROGRESSINDICATOR)
-obj.Active = true
-local a1 = obj:addComponent(OE.Component.componentTypes.MATERIAL)
-local b = obj:addComponent(OE.Component.componentTypes.TEXT)
-OE.LocalNetwork.host('129.123.2.2',10,function ()
-  obj.Components[b].Text.Text = OE.LocalNetwork.CurrentConnection.lastMessage[3]
-end)
-obj.Components[b].Text.Text = 'tet'
-obj.onValueChanged = OE.Script.getMethod('button')[1]
-obj.Components[a1].Color.First = 0x007755
-obj.Components[a1].Color.Second = 0xFFFFFF
-obj.Components[a1].Color.Third = 0x00FFFF
-obj.Components[a1].Color.Fourth = 0x007755
---obj.Components[obj:addComponent(OE.Component.componentTypes.SCRIPT)].file = "Test.lua"
---obj.Components[obj:addComponent(OE.Component.componentTypes.TEXT)].Text = "test"
---obj.Components[obj:addComponent(OE.Component.componentTypes.SPRITE)].file = 'Test.pic'
-obj.Transform.Scale.Width = 27
-obj.Transform.Scale.Height = 3
-obj.Transform.Position.x = 10
-obj.Transform.Position.y = 3
-local obj1 = OE.createObject()
-obj1:setRenderMode(OE.Render.renderTypes.INPUT)
-local a = obj1:addComponent(OE.Component.componentTypes.MATERIAL)
-local b = obj1.Components[obj1:addComponent(OE.Component.componentTypes.TEXT)]
-b.Text.Text = "test"
-b.Text.PlaceHolder = 'PlHold'
-b.Text.LocalizationPlaceHolder = 'Idk'
-OE.CurrentScene.Localization['Russian']['Idk'] = 'Test????'
-obj1.Components[a].Color.First = 0x007755
-obj1.Components[a].Color.Second = 0xFFFFFF
-obj1.Components[a].Color.Third = 0xFFFFFF
-obj1.Components[a].Color.Fiveth = 0xFFFFFF
-obj1.Components[a].Color.Fourth = 0x007755
-obj1.Transform.Position.x = 10
-obj1.Transform.Position.y = 20
-obj1.Transform.Scale.Width = 20
-obj1.Transform.Scale.Height = 3
-local g = obj:addComponent(OE.Component.componentTypes.SCRIPT)
-obj.Components[g].file = "Test.lua"
-local function button(Object)
-  --obj.addItem(b.Text.Text,OE.Script.getMethod('choosedItem')[1])
-  --obj.updateItems()
-  obj.Roll()
-  print('You change me!:3')
-  if b.Text.Text == 'new' then
-    obj:addToRender()
-  elseif b.Text.Text == 'remove' then
-    obj:removeFromRender()
-  end
-  obj.Components[a1].Color.First = math.random(0x0,0xFFFFFF)
-  obj.Components[a1].Color.Second = math.random(0x0,0xFFFFFF)
-  obj.Components[a1].Color.Third = math.random(0x0,0xFFFFFF)
-  obj.Components[a1].Color.Fiveth = math.random(0x0,0xFFFFFF)
-  obj.Components[a1].Color.Fourth = math.random(0x0,0xFFFFFF)
-end
-local function choosedItem(Item)
-  print(Item.name)
-end
-OE.CurrentScene.Storage.test = {}
-local function update(...)
-  local args = {...}
-  args[1].Transform.Position.x = args[1].Transform.Position.x + 80 * args[2].deltaTime
-  if  args[1].Transform.Position.x > 160 then
-     args[1].Transform.Position.x = -2
-  end
-  obj1.Transform.Position.x = obj1.Transform.Position.x + 60 * args[2].deltaTime
-  if  obj1.Transform.Position.x > 160 then
-     obj1.Transform.Position.x = -20
-  end
-  b.Text.Text = tostring(args[2].deltaTime)
- -- if type(args[2].lastEvent[4]) == "number" then
- --  args[1].Transform.Position.x = args[2].lastEvent[3]-math.ceil(args[1].Transform.Scale.Width/2)-args[2].Render.Window.x
-  --  args[1].Transform.Position.y = args[2].lastEvent[4]-math.ceil(args[1].Transform.Scale.Height/2)-args[2].Render.Window.y
- -- end
-end
-OE.Storage.createFile(OE.CurrentScene.Storage.test,'Test.lua',[[
-b = {}
-obj1Tranform = {}
-speed = 80
-function Update()
-    local obj1TranformPosition = obj1Tranform.Position
-    Transform.Position.x = Transform.Position.x + speed * Time.deltaTime
-    if Transform.Position.x > 160 then
-        Transform.Position.x = -2
+local OE = loadfile("/OpenGames 2/Main.lua")()
+OE.createScene('Dev')
+local sky = OE.createObject('SkyBox','Dev')
+local obj = OE.createObject('Name','Dev')
+local obj1 = OE.createObject('Name?','Dev')
+OE.Storage.loadFile('Test.lua',[[
+speed = 20
+
+function onTouch(x,y,button)
+    if button == Object._Index-2 then
+        Transform.Position.y = y
+        Transform.Position.x = x
     end
-    obj1TranformPosition.x = obj1TranformPosition.x + 60 * Time.deltaTime
-    if obj1TranformPosition.x > 160 then
-        obj1TranformPosition.x = -20
+end
+function onDrag(x,y,button)
+    if button == Object._Index-2 then
+        Transform.Position.y = y
+        Transform.Position.x = x
     end
-    b.Text.Text = tostring(Time.deltaTime)
+end
+function Start()
+    Transform.Position.y = 25
+    Transform.Position.x = 78
+    Transform.Scale.w = 20
+    Transform.Scale.h = 10
 end
 ]])
-OE.Script.Reload()
-obj.Components[g].Script.b = b
-obj.Components[g].Script.obj1Tranform = obj1.Transform
---obj.addItem('Test',OE.Script.getMethod('choosedItem')[1])
---obj.addItem('Tt',OE.Script.getMethod('choosedItem')[1])
---obj.addItem('Tjj',OE.Script.getMethod('choosedItem')[1])
---obj.onValueChanged = OE.Script.getMethod('button')[1]
-obj1.onInputFinished = OE.Script.getMethod('button')[1]
-obj1:addToRender()
-obj:addToRender()
+sky:_addScript('MAIN_Panel.lua',"Render")
+sky.Render.color = 0x989898
+sky._Transform.Scale = {}
+sky._Transform.Scale.w = 160
+sky._Transform.Scale.h = 50
+obj:_addScript('MAIN_Text.lua',"Render")
+obj:_addScript('Test.lua',"TestScript")
+obj.Render.text = 'TEST'
+obj1:_addScript('Test.lua','TestScript')
+obj1:_addScript('MAIN_Panel.lua','Render')
+obj1.Render.color = 0xAA00AA
+OE.loadScene('Dev')
+OE.initWindow()
 OE.Render.Window:start(0)

@@ -130,14 +130,14 @@ local function set(x,y,symbol)
 end
 function master.process(forceFullFrame)
    if debug then
-        set(1,6,'Custom '..debugInfo[5])
-  if timerFPS < os.clock() then
-    timerFPS = os.clock() + 1
-     fpsTotal = fps
-     fps = 0
+      set(1,6,'Custom '..debugInfo[5])
+      if timerFPS < os.clock() then
+        timerFPS = os.clock() + 1
+         fpsTotal = fps
+         fps = 0
         set(1,1,'FPS '..tostring(fpsTotal))
         set(1,2,'Objects drawn '..tostring(debugInfo[1]))
-        set(1,3,'Avg time per object '..tostring(debugInfo[3]*100000)..'us')
+        set(1,3,'Avg time per object '..tostring(debugInfo[3]*100000)..'ms')
         set(1,4,'Last drawn '..tostring(debugInfo[4]))
         set(1,5,'Colides called '..tostring(debugInfo[2]))
         debugInfo = {0,0,0,debugInfo[4],debugInfo[5]}
@@ -164,8 +164,9 @@ local transformRelated = {x=0,y=0,w=0,h=0}
 function master.newObject(x,y,w,h,draw)
     local object = {x=x,y=y,w=w,h=h,colides={},draw=draw,id=math.random(0,9999999),
     setIndex = function(me,newIndex) 
-        table.insert(objects,newIndex,me)
-        table.remove(objects,me.index)
+        local tmp = objects[newIndex]
+        objects[newIndex] = objects[me.index]
+        objects[me.index] = tmp
         me.index = newIndex
     end,
     remove = function(me) 
@@ -176,24 +177,17 @@ function master.newObject(x,y,w,h,draw)
    local object = addObject(setmetatable({},{
         __newindex = function(self,k,v)
             if transformRelated[k] then
-                object[k] = math.max(0,v)
+                object[k] = math.max(1,math.ceil(v))
                 addQueue(object)
             else 
                 object[k] = v
             end
         end, 
-        __index = function(self,k) 
-            return object[k]
-        end}
+        __index = object}
     ))
-    queueBuffer[object.id] = {}
-    local bObj = queueBuffer[object.id]
-    bObj.x = object.x
-    bObj.y = object.y
-    bObj.h = object.h
-    bObj.w = object.w
-    bObj.index = object.index
+    queueBuffer[object.id] = {x = object.x,y = object.y,h = object.h,w = object.w,index = object.index}
    addQueue(object)
+   return object
 end
 
 return master

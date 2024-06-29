@@ -1,30 +1,24 @@
-local text,uni,UIObject = require('Screen').drawText,unicode
+local drawText,uni,UIObject = require('Screen').drawText,unicode
 text = ""
 color = 0xFFFFFF
 local function draw(obj)
-	text(Transform.x,Transform.y,color,text)
+	drawText(math.ceil(Transform.Position.x),math.ceil(Transform.Position.y),color,text)
 end
 
-function Start()
-	UIObject = OE.Render.Matrix.newObject(Transform.x,Transform.y,uni.len(text),1,draw)
+function Init()
+	UIObject = OE.Render.Matrix.newObject(Transform.Position.x,Transform.Position.y,uni.len(text),1,draw)
 end
 
-function onObjectMove(x,y) --Transoform script
+function onObjectMove(x,y) --Transform script
     UIObject.x = x
 	UIObject.y = y
 end
 
-function onObjectReindex(newIndex)
+function onObjectReindex(newIndex) --Main object script
 	UIObject:setIndex(newIndex)
-end
-
-function onObjectResize()
-  Transoform.width = uni.len(text)
-  Transoform.height = 1
 end
 
 function setText(newText)
     UIObject.w = uni.len(newText)
 	text = newText
-	Transoform.width = UIObject.w
 end

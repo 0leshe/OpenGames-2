@@ -1,4 +1,4 @@
-local isDebug = false
+local isDebug = true
 local GUI = require("GUI")
 local System = require("System")
 local text = require("Text")
@@ -17,12 +17,12 @@ local OE = {
         timeElapsed = 0
     },
     version = "0.3",
-    maxFPS = 60,
+    maxFPS = 201,
     Project = {
         Storage = {},
         Name="EmptyProject",
         IconFile = false, -- file name
-        FirstScene = 'Empty',
+        FirstScene = '',
         Window = {Color = 0x303030},
         Localization = {['Russian']={}},
         Scenes = {}
@@ -58,7 +58,7 @@ local function removeObject(Object)
     OE.CurrentScene[Object._ID] = nil
 end
 function OE.initWindow(Workspace)
-    OE.Render.Window = GUI.workspace()
+    OE.Render.Window = Workspace or GUI.workspace()
     OE.Render.Workspace = OE.Render.Window:addChild(GUI.container(1,1,160,50))
     OE.Render.Window.OE = OE
     local was = os.clock()
@@ -119,6 +119,9 @@ function OE.initWindow(Workspace)
     end
     OE.Render.Window.eventHandler = function(_,We,...) -- For scripts that in thread, and stuff like that
         We.OE.lastEvent = {...}
+        if We.OE.lastEvent[1] ~= '' then
+            OE.Input.onEvent()
+        end
         We.OE.tick()
         if OE.Input.getButtonUp(OE.Input.keyCode.floatLine) then
             if not wasOpenCommand then
@@ -145,24 +148,22 @@ end
 function OE.tick()
     local clocks,time = os.clock(),OE.Time
     time.timeElapsed = clocks - startTime
-    OE.Scripts.runEveryWithName('Update')
-    time.delta = clocks - timeWas
+    OE.Script.runEveryWithName('Update')
+    time.deltaTime = clocks - timeWas
     local timeCheckpoint = clocks + math.max(0, 1/OE.maxFPS - time.deltaTime)
-  while os.clock() < timeCheckpoint do end
+    while os.clock() < timeCheckpoint do end -- Fps contrl
     time.deltaTime = math.max(time.deltaTime,time.deltaTime + (1/OE.maxFPS -time.deltaTime))
     timeWas = os.clock()
     if isDebug then
         commandWindow:draw()
     end
-    OE.Render:proccess()
+    OE.Render.Matrix.process()
 end
 local function addScript(object, source, name,compile)
     object[name] = {_Enabled = true,
     _SourceFile = source}
     if compile then
-        OE.Script.Compile(Object,OE.Storage.getFile(object._SourceFile))
-        setmetatable(object[name],result)
-        if object[name].Start then object[name].Start() end
+        OE.Script.Compile(object,object[name],name)
     end
 end
 function OE.nilObject()
@@ -171,45 +172,53 @@ function OE.nilObject()
         _Enabled = true,
         _Index = 1,
         _Remove = removeObject,
-        setIndex = function(me, index)
-            table.insert(OE.CurrentScene.Objects,index,me)
-            table.remove(OE.CurrentScene.Objects,me._Index)
+        _setIndex = function(me, index)
+            local tmp = OE.CurrentScene.Objects[index]
+            OE.CurrentScene.Objects[index] = OE.CurrentScene.Objects[me._Index]
+            OE.CurrentScene.Objects[me._Index] = tmp
             me._Index = index
-        end
-        addScript = addScript
+        end,
+        _addScript = addScript
     }
-    obj:addScript('MAIN_Transform.lua','Transform')
+    obj:_addScript('MAIN_Transform.lua','_Transform')
     return obj
 end
 function OE.createScene(Name)
-    local toend = {Object={},Localization={}}
+    local toend = {Objects={},Localization={}}
     toend.Localization[UserData.localizationLanguage] = {}
-    OE.Scenes[Name] = toend
+    OE.Project.Scenes[Name] = toend
     return toend
 end
 function OE.loadScene(SceneName)
-    local currentScene = OE.CurrentScene
-    if currentScene then
+    if OE.CurrentScene then
         OE.Render.clearRender()
     end
-    currentScene = OE.deepcopy(OE.Project.Scenes[SceneName]) -- В проектах экземпляр сцены, после её загрузки она меняется по скриптам не зависимо от экземпляра
+    OE.CurrentScene = OE.deepcopy(OE.Project.Scenes[SceneName]) -- В проектах экземпляр сцены, после её загрузки она меняется по скриптам не зависимо от экземпляра
+    local currentScene = OE.CurrentScene
     for i = 1, #currentScene.Objects do
         local Object = currentScene.Objects[i]
         if Object._Enabled then
+            OE.Script.Compile(Object,Object._Transform,"_Transform")
             for i, v in pairs(Object) do
-                if v._Enabled and string.sub(i,1,1) ~= '_' then
-                    local result = OE.Script.Compile(Object,OE.Storage.getFile(v._SourceFile))
-                    setmetatable(v,result)
-                    if v.Start then v.Start() end
+                if string.sub(i,1,1) ~= '_' and v._Enabled then
+                    OE.Script.Compile(Object,v,i)
                 end
             end
         end
     end
+    OE.Script.runEveryWithName('Init')
+    OE.Script.runEveryWithName('Start')
 end
-function OE.createObject()
+function OE.createObject(ObjectName, SceneName)
     local object = OE.nilObject()
-    object._Index = #OE.CurrentScene.Objects
-    OE.CurrentScene.Objects[#OE.CurrentScene.Objects + 1] = object
+    object._Name = ObjectName
+    if SceneName then
+        object._Index = #OE.Project.Scenes[SceneName].Objects+1
+        OE.Project.Scenes[SceneName].Objects[#OE.Project.Scenes[SceneName].Objects + 1] = object
+    else
+        object._Index = #OE.CurrentScene.Objects+1
+        OE.CurrentScene.Objects[#OE.CurrentScene.Objects + 1] = object
+    end
     return object
 end
 return OE

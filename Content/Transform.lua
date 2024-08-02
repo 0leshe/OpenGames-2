@@ -1,9 +1,15 @@
-local transform = {x=1,y=1,w=1,h=1}
+local transform = {x=1, y=1, w=1, h=1}
+Position = {}
 Position = setmetatable({}, {__index = transform, __newindex = function(me,k, v)
 	transform[k] = v
+	OE.log(v, transform[k], Position[k],k)
 	OE.Script.runEveryWithName('onObjectMove', Object,transform.x,transform.y)
 end})
 Scale = setmetatable({}, {__index = transform, __newindex = function(me,k, v)
 	transform[k] = v
 	OE.Script.runEveryWithName('onObjectResize', Object,transform.w,transform.h)
 end})
+
+function onObjectDisable()
+	self:_SetEnable(true)
+end

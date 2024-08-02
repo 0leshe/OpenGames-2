@@ -143,10 +143,12 @@ function master.process(forceFullFrame)
         debugInfo = {0,0,0,debugInfo[4],debugInfo[5]}
       end
   end
-  renderProcesses[currentRender]()
   if forceFullFrame then
     setDrawLimit(1,1,160,50)
     screenUpdate()
+  renderProcesses['default']()
+else
+  renderProcesses[currentRender]()
   end
   fps = fps + 1
   queueIndex = {}
@@ -170,9 +172,11 @@ function master.newObject(x,y,w,h,draw)
         me.index = newIndex
     end,
     remove = function(me) 
+        objectsID[me.id] = nil
         table.remove(objects,me.index)
-        objectsID[me.ID] = nil
+        queueBuffer[me.id] = nil
         me = nil
+        master.process(true)
     end}
    local object = addObject(setmetatable({},{
         __newindex = function(self,k,v)
@@ -189,5 +193,6 @@ function master.newObject(x,y,w,h,draw)
    addQueue(object)
    return object
 end
+
 
 return master

@@ -1,43 +1,63 @@
-local isDebug = true
+local isDebug, debugHandler = true
 local GUI = require("GUI")
 local System = require("System")
-local text = require("Text")
+local pull = require('Event').pull
 local gpu = require("Component").gpu
-local UserData = System.getUserSettings()
 local timeWas = os.clock()
 local startTime = timeWas
 local wasOpenCommand = false
-local commandWindow
+local running = true
 local args = {...}
 _,args = System.parseArguments(table.unpack(args))
 args.GPUBuffers = true
 local OE = {
+    root = string.gsub(System.getCurrentScript(),"Main.lua",""),
     Time = {
         deltaTime = 0,
         timeElapsed = 0
     },
-    version = "0.3",
+    version = "0.4",
     maxFPS = 201,
     Project = {
         Storage = {},
         Name="EmptyProject",
         IconFile = false, -- file name
         FirstScene = '',
-        Window = {Color = 0x303030},
         Localization = {['Russian']={}},
         Scenes = {}
     }
 }
 OE.huge = 2147483647 --int max, i guess
 local function loadModule(ModuleName,...)
-    OE[ModuleName] = assert(loadfile(string.gsub(System.getCurrentScript(),"Main.lua",ModuleName..".lua")))(OE,...)
+    local wk,response = GUI.workspace(),false
+    OE[ModuleName] = assert(loadfile(OE.root .. ModuleName..".lua"))(OE,...)
+    if not OE[ModuleName] then
+		local container = GUI.addBackgroundContainer(wk, true, true)
+        container.layout:addChild(GUI.button(1, 2, 20, 3, 0x989898, 0x030303, 0x030303, 0x989898, 'Continue')).onTouch = function()
+            container:remove()
+            response = true
+        end
+        container.layout:addChild(GUI.button(2, 2, 20, 3, 0x989898, 0x030303, 0x030303, 0x989898, 'Exit')).onTouch = function()
+            response = true
+            OE = nil
+            exit()
+            wk:remove()
+        end
+        container.layout:addChild(GUI.text(1, 1, 0xF0F0F0, 'Module with name '.. ModuleName .. ' was loaded incorrectly. Still wanna continue?'))
+        wk:start(1)
+        while not response do
+            pull(0)
+        end
+    end
+    wk:stop()
+    wk = nil
 end
 loadModule("Render", nil, not args.GPUBuffers, false, isDebug)
 loadModule("Script")
 loadModule("Localization")
 loadModule("Input")
 loadModule("Storage")
-loadModule("Sound")
+--loadModule("Sound") не работает на данный момент
 loadModule("Network")
 function OE.deepcopy(orig)
     local orig_type = type(orig)
@@ -54,95 +74,29 @@ function OE.deepcopy(orig)
     return copy
 end
 local function removeObject(Object)
-    OE.CurrentScene[Object._ID].Render:removeGraphicObject()
+    OE.Script.runEveryWithName('onObjectRemove',Object)
     OE.CurrentScene[Object._ID] = nil
+    Object = nil
 end
 function OE.initWindow(Workspace)
-    OE.Render.Window = Workspace or GUI.workspace()
-    OE.Render.Workspace = OE.Render.Window:addChild(GUI.container(1,1,160,50))
-    OE.Render.Window.OE = OE
-    local was = os.clock()
-    if isDebug then
-        commandWindow = OE.Render.Window:addChild(GUI.titledWindow(70,5,80,25,"OE2 command window",true))
-        commandWindow.hidden = true
-        commandWindow.actionButtons:remove()
-        commandWindow.backgroundPanel.colors.background, commandWindow.titleLabel.colors.text, commandWindow.titlePanel.colors.background = 0x303030, 0x404040, 0x202020
-        local commandWindowLines = commandWindow:addChild(GUI.textBox(1,3,78,19,0x303030, 0x909090, {},1,2,0))
-        commandWindow.print = function(...)
-            local args = {...}
-            local color = not args[1] and 0xBB0000 or 0x909090
-            local recursive
-            local maxRecusive = 10
-            local function serialize(tbl,Index)
-                recursive = recursive + 1
-                if recursive <= maxRecusive then
-                    if Index then
-                        table.insert(commandWindowLines.lines,{text=string.rep("   ",recursive).."InTable: " .. Index,color=color})
-                        commandWindowLines:scrollDown()
-                    end
-                    for i,v in pairs(tbl) do
-                        i = '["' ..i .. '"]'
-                        if type(v) == "table" then
-                            if v == tbl then
-                                table.insert(commandWindowLines.lines,{text=string.rep("   ",recursive+1) .. "Recursion on main table",color=0xAAAA00})
-                                commandWindowLines:scrollDown()
-                            else
-                                serialize(v,i)
-                                recursive = recursive - 1
-                            end
-                        else
-                            for _, w in pairs(text.wrap(i .." = " .. tostring(v),78)) do
-                                table.insert(commandWindowLines.lines,{text=string.rep("   ",recursive+1) .. w,color=color})
-                                commandWindowLines:scrollDown()
-                            end
-                        end
-                    end
-                else
-                    table.insert(lines,{text=string.rep('   ',recursive+1) .. 'Max recursion lock',color=0xAAAA00})
-                end
-            end
-            for i = 2, #args do
-                if type(args[i]) == "table" then
-                    recursive = -1
-                    serialize(args[i],"_RETURN_" .. tostring(i-1))
-                else
-                    for _, v in pairs(text.wrap(tostring(args[i]),78)) do
-                        table.insert(commandWindowLines.lines,{text=v,color=color})
-                        commandWindowLines:scrollDown()
-                    end
-                end
-            end
-        end
-        commandWindow:addChild(GUI.input(1,23,80,3,0x505050, 0x202020,0x202020, 0x505050, 0x202020, "local args = {...} return args[1].", "> Command")).onInputFinished = function(_,we)
-            commandWindow.print(pcall(function() return load(we.text)(OE) end))
-        end
-    end
-    OE.Render.Window.eventHandler = function(_,We,...) -- For scripts that in thread, and stuff like that
-        We.OE.lastEvent = {...}
-        if We.OE.lastEvent[1] ~= '' then
+    while running do
+        OE.lastEvent = {pull(0)}
+        if OE.lastEvent[1] ~= '' then
             OE.Input.onEvent()
         end
-        We.OE.tick()
-        if OE.Input.getButtonUp(OE.Input.keyCode.floatLine) then
-            if not wasOpenCommand then
-                wasOpenCommand = true
-                commandWindow.hidden = false
-            else
-                wasOpenCommand = false
-                commandWindow.hidden = true
-            end
-        elseif OE.Input.getButton(OE.Input.keyCode.altLeft) and OE.Input.getButton(OE.Input.keyCode.four) then
+        OE.tick()
+        if OE.Input.getButton(OE.Input.keyCodes.ALT_LEFT) and OE.Input.getButton(OE.Input.keyCodes.FOUR) then
             OE.exit()
         end
     end
 end
-OE.Debug = {
-    Log = function(str, isErr)
-        commandWindow.print(not isErr, str)
-    end
-}
 function OE.exit()
-    OE.Render.Abort()
+    OE.Render.clearRender()
+    if isDebug then
+        debugHandler:write('Engine stop.') 
+        debugHandler:close() 
+    end
+    running = false
     OE = nil
 end
 function OE.tick()
@@ -151,17 +105,21 @@ function OE.tick()
     OE.Script.runEveryWithName('Update')
     time.deltaTime = clocks - timeWas
     local timeCheckpoint = clocks + math.max(0, 1/OE.maxFPS - time.deltaTime)
-    while os.clock() < timeCheckpoint do end -- Fps contrl
+    while os.clock() < timeCheckpoint do end
     time.deltaTime = math.max(time.deltaTime,time.deltaTime + (1/OE.maxFPS -time.deltaTime))
     timeWas = os.clock()
-    if isDebug then
-        commandWindow:draw()
-    end
     OE.Render.Matrix.process()
 end
 local function addScript(object, source, name,compile)
     object[name] = {_Enabled = true,
-    _SourceFile = source}
+    _SourceFile = source, _SetEnable = function(self, toggle)
+        if toggle then
+            OE.Script.runEveryWithName('onObjectEnable')
+        else
+            OE.Script.runEveryWithName('onObjectDisable')
+        end
+        self._Enabled = toggle
+    end}
     if compile then
         OE.Script.Compile(object,object[name],name)
     end
@@ -180,14 +138,12 @@ function OE.nilObject()
         end,
         _addScript = addScript
     }
-    obj:_addScript('MAIN_Transform.lua','_Transform')
+    obj:_addScript('MAIN_Transform.lua','Transform')
     return obj
 end
 function OE.createScene(Name)
-    local toend = {Objects={},Localization={}}
-    toend.Localization[UserData.localizationLanguage] = {}
-    OE.Project.Scenes[Name] = toend
-    return toend
+    OE.Project.Scenes[Name] = {Name = Name, Objects={}}
+    return OE.Project.Scenes[Name]
 end
 function OE.loadScene(SceneName)
     if OE.CurrentScene then
@@ -198,15 +154,14 @@ function OE.loadScene(SceneName)
     for i = 1, #currentScene.Objects do
         local Object = currentScene.Objects[i]
         if Object._Enabled then
-            OE.Script.Compile(Object,Object._Transform,"_Transform")
+            OE.Script.Compile(Object,Object.Transform,'Transform')
             for i, v in pairs(Object) do
-                if string.sub(i,1,1) ~= '_' and v._Enabled then
+                if string.sub(i,1,1) ~= '_' and v._Enabled and i ~= 'Transform'then
                     OE.Script.Compile(Object,v,i)
                 end
             end
         end
     end
-    OE.Script.runEveryWithName('Init')
     OE.Script.runEveryWithName('Start')
 end
 function OE.createObject(ObjectName, SceneName)
@@ -218,7 +173,29 @@ function OE.createObject(ObjectName, SceneName)
     else
         object._Index = #OE.CurrentScene.Objects+1
         OE.CurrentScene.Objects[#OE.CurrentScene.Objects + 1] = object
+        OE.Script.Compile(object,object.Transform,'Transform')
     end
     return object
 end
+
+if isDebug then
+    local ser = require('text').serialize
+    debugHandler = require('Filesystem').open(OE.root .. 'lastLog.txt', 'w')
+    debugHandler:write(os.date("%X",System.getTime()) .. ' [DBG] Engine start.\n') 
+    OE.log = function(...)
+        local args = {...}
+        debugHandler:write(os.date("%X",System.getTime()) .. ' [DBG] ')
+        for i = 1, #args do
+            if type(args[i]) == 'table' then
+                debugHandler:write(ser(args[i]) .. '    ')
+            else
+                debugHandler:write(tostring(args[i]) .. '    ')
+            end
+        end
+        debugHandler:write('\n')
+    end
+else
+    OE.log = function() return false, 'debug is false' end
+end
+
 return OE

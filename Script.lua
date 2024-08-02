@@ -11,9 +11,10 @@ local globalEnv = setmetatable({
     return sharedToken
   end,
 }, {__index = _ENV})
-local function runScript(code, privateVars, object)
+local function runScript(code, privateVars, object, script)
   local vars = {}
   local sharedNames = {}
+  local scriptObj = script
   local privateNames = {}
   local privateNamesVars = {}
   privateVars = privateVars or {}
@@ -22,50 +23,62 @@ local function runScript(code, privateVars, object)
   end
   local envMeta = {
     __index = function(self, k)
-      return sharedNames[k] and shared[k] or privateNamesVars[k] and privateVars[k] or (privateNames[k] or vars[k] ~= nil) and vars[k] or globalEnv[k]
-      --[[if sharedNames[k] then -- Оно выше, просто сжато. На спичках, да-да
-        return shared[k]
-      elseif privateNamesVars[k] then
-        return privateVars[k]
-      elseif
-          privateNames[k]
-          or vars[k] ~= nil then 
-        return vars[k]
-      end
-
-      return globalEnv[k]]
+      OE.log('get.',k, scriptObj._SourceFile, scriptObj._Enabled)
+     -- return sharedNames[k] and shared[k] or privateNamesVars[k] and privateVars[k] or (privateNames[k] or vars[k] ~= nil) and vars[k] or globalEnv[k]
+       -- РћРЅРѕ РІС‹С€Рµ, РїСЂРѕСЃС‚Рѕ СЃР¶Р°С‚Рѕ. РќР° СЃРїРёС‡РєР°С…, РґР°-РґР°
+          if sharedNames[k] then 
+            return shared[k]
+          elseif privateNamesVars[k] then
+            return privateVars[k]
+          elseif
+              privateNames[k]
+              or vars[k] ~= nil then 
+            return vars[k]
+          end
+          return globalEnv[k]
     end,
 
     __newindex = function(self, k, v)
-      if rawequal(sharedToken, v) then
-        sharedNames[k] = true
-      elseif sharedNames[k] then
-        shared[k] = v
-      elseif privateNamesVars[k] then
-        privateVars[k] = v
-      else
-        privateNames[k] = true
-        vars[k] = v
-        if type(v) == 'function' then
-          Scripts.volcab[k] = Scripts.volcab[k] or {}
-          Scripts.volcab[k][v] = object
+      OE.log('set.',k,v, scriptObj._SourceFile, scriptObj._Enabled)
+      if scriptObj._Enabled then
+          if rawequal(sharedToken, v) then
+            sharedNames[k] = true
+          elseif sharedNames[k] then
+            shared[k] = v
+          elseif privateNamesVars[k] then
+            privateVars[k] = v
+          else
+            privateNames[k] = true
+            vars[k] = v
+            if type(v) == 'function' then
+              OE.log('addedToValcab.',k,v,scriptObj._SourceFile,object._Name)
+              if not Scripts.volcab[k] then Scripts.volcab[k]={} end
+              table.insert(Scripts.volcab[k], {object,v,scriptObj._SourceFile,k})
+            end
+          end
         end
-      end
     end,
   }
-
-  assert(load(code, "@OE_TMP_SCRIPT_EXECUTION.lua", "t", setmetatable({}, envMeta)))()
+  OE.log('compilation start.',scriptObj._SourceFile)
+  assert(load(code, scriptObj._SourceFile, "t", setmetatable({}, envMeta)))()
+  OE.log('compilation end.',scriptObj._SourceFile)
   return vars
 end
 
 function Scripts.runEveryWithName(name,object,...)
+    if name ~= 'Update' then OE.log('runEveryWithName.',name,object and object._Name or '_WithoutFilter',...) end
     if Scripts.volcab[name] then
-        for i, v in pairs(Scripts.volcab[name]) do
-            if object then
-                if v == object then
-                    i(...)
-                end
-            else
+        for i = 1, #Scripts.volcab[name] do
+            v = Scripts.volcab[name][i][1]
+            k = Scripts.volcab[name][i][4]
+            scriptName = Scripts.volcab[name][i][3]
+            i = Scripts.volcab[name][i][2]
+            OE.log('inVolcab.',i,k,scriptName,v._Name)
+            if v == object then
+                OE.log('calling exactly for.',scriptName,v._Name)
+                i(...)
+            elseif not object then
+                OE.log('calling grouped for.',scriptName,v._Name)
                 i(...)
             end
         end
@@ -75,7 +88,7 @@ local function Patern(script,patern)
     for i, v in pairs(patern) do
         if string.sub(i,1,1) ~= '_' then
             if type(v) == 'table' then
-                Patern(script,v)
+                Patern(script[i],v)
             else
                 script[i] = v
             end
@@ -84,10 +97,11 @@ local function Patern(script,patern)
 end
 
 function Scripts.Compile(object, scriptObj, scriptName)
-    local script = runScript(OE.Storage.getFile(scriptObj._SourceFile), {Transform = object._Transform, Object = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, Time = OE.Time}, object)
+    local script = runScript(OE.Storage.getFile(scriptObj._SourceFile), {script = object[scriptName], Transform = object.Transform, Object = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, Time = OE.Time}, object, scriptObj)
     Patern(script,scriptObj)
-    object[scriptName] = setmetatable(object[scriptName],{__index=script,__newindex=script})
-    return script
+    object[scriptName] = setmetatable({object[scriptName]._Enabled,object[scriptName]._SourceFile},{__index=script,__newindex=script})
+   --object[scriptName] = script
+    return script, script.Init and script.Init()
 end
 
 return Scripts

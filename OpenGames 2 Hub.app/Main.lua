@@ -246,7 +246,7 @@ newProject.onTouch = function()
         end
     end
 end
-hintCreateNewProject = winMask:addChild(GUI.text(100-2-math.ceil(uni.len(lc.hintCreateNewProject)*1.5),38,getColor(3),lc.hintCreateNewProject))
+hintCreateNewProject = winMask:addChild(GUI.text(100-2-math.ceil(uni.len(lc.hintCreateNewProject)*2),38,getColor(3),lc.hintCreateNewProject))
 hintCreateNewProject.hidden = true
 if #UserData.OpenGames.Projects == 0 then
     hintCreateNewProject.hidden = false

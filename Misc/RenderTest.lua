@@ -164,19 +164,20 @@ local transformRelated = {x=0,y=0,w=0,h=0}
 function master.newObject(x,y,w,h,draw)
     local object = {x=x,y=y,w=w,h=h,colides={},draw=draw,id=math.random(0,9999999),
     setIndex = function(me,newIndex) 
-        table.insert(objects,newIndex,me)
-        table.remove(objects,me.index)
+        local tmp = objects[newIndex]
+        objects[newIndex] = objects[me.index]
+        objects[me.index] = tmp
         me.index = newIndex
     end,
     remove = function(me) 
+        objectsID[me.id] = nil
         table.remove(objects,me.index)
-        objectsID[me.ID] = nil
         me = nil
     end}
    local object = addObject(setmetatable({},{
         __newindex = function(self,k,v)
             if transformRelated[k] then
-                object[k] = math.ceil(math.max(1,v))
+                object[k] = math.max(1,math.ceil(v))
                 addQueue(object)
             else 
                 object[k] = v

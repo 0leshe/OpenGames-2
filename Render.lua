@@ -3,8 +3,8 @@ local Render = {Matrix = assert(loadfile(string.gsub(require'System'.getCurrentS
 
 function Render.clearRender()
   local objList = Render.Matrix.objects
-  for i = 1, #objList do
-      Render.Matrix.objects:remove()
+  while #objList > 1 do
+      Render.Matrix.objects[1]:remove()
   end
 end
 

@@ -1,11 +1,11 @@
 local fs = require("Filesystem")
 local Storage = {intensity = 1,isStreamingAssets=false}
-local ContentPath = string.gsub(require'System'.getCurrentScript(),'Storage.lua','Content/')
 local args = {...}
 local OE = args[1]
 local loaded = {}
 local storage = OE.Project.Storage
-OE.fileRoot = OE.root .. 'Additional_Content/'
+OE.fileRoot = OE.applicationRoot .. 'Additional_Content/'
+OE.contentPath = OE.root .. 'Content/'
 if fs.exists(OE.fileRoot) then
     if fs.extension(OE.fileRoot) == '.dat' then
         Storage.isStreamingAssets = true
@@ -48,10 +48,10 @@ function Storage.getFile(name)
     return file
 end
 
-local engineScriptsFiles = fs.list(ContentPath)
+local engineScriptsFiles = fs.list(OE.contentPath)
 
 for i = 1, #engineScriptsFiles do
-    Storage.Import('MAIN_'..engineScriptsFiles[i],ContentPath..engineScriptsFiles[i])
+    Storage.Import('MAIN_'..engineScriptsFiles[i],OE.contentPath..engineScriptsFiles[i])
 end
 
 return Storage

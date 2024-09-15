@@ -15,11 +15,13 @@ function Input.getButtonUp(key)
     return (OE.lastEvent[4] == key and OE.lastEvent[1] == "key_up") and true or false
 end
 
-local YESSSSthatoutboys = {touch=function() OE.Script.runEveryWithName("onTouch",nil,OE.lastEvent[3],OE.lastEvent[4],OE.lastEvent[5]) end,
-drag=function() OE.Script.runEveryWithName("onDrag",nil,OE.lastEvent[3],OE.lastEvent[4],OE.lastEvent[5]) end,
-key_down=function() OE.Script.runEveryWithName("onKeyDown",nil,OE.lastEvent[4]) end,
-key_up=function() OE.Script.runEveryWithName("onKeyUp",nil,OE.lastEvent[4]) end,
-drop=function() OE.Script.runEveryWithName("onDrop",nil,OE.lastEvent[3],OE.lastEvent[4],OE.lastEvent[5]) end}
+local YESSSSthatoutboys = {
+    touch=function() OE.Script.runEveryWithName("onTouch",nil,OE.lastEvent[3],OE.lastEvent[4],OE.lastEvent[5]) end,
+    drag=function() OE.Script.runEveryWithName("onDrag",nil,OE.lastEvent[3],OE.lastEvent[4],OE.lastEvent[5]) end,
+    key_down=function() OE.Script.runEveryWithName("onKeyDown",nil,OE.lastEvent[4]) end,
+    key_up=function() OE.Script.runEveryWithName("onKeyUp",nil,OE.lastEvent[4]) end,
+    drop=function() OE.Script.runEveryWithName("onDrop",nil,OE.lastEvent[3],OE.lastEvent[4],OE.lastEvent[5]) end
+}
 function Input.onEvent()
     return YESSSSthatoutboys[OE.lastEvent[1]] and YESSSSthatoutboys[OE.lastEvent[1]]()
 end

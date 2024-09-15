@@ -11,13 +11,15 @@ local args = {...}
 _,args = System.parseArguments(table.unpack(args))
 args.GPUBuffers = true
 local OE = {
-    root = string.gsub(System.getCurrentScript(),"Main.lua",""),
+    root = string.gsub(System.getCurrentScript(), 'Main.lua', ''),
     Time = {
         deltaTime = 0,
         timeElapsed = 0
     },
+    huge = 17976931348623e+308, -- int max +-
     version = "0.4",
-    maxFPS = 201,
+    applicationRoot = '/',
+    maxFPS = math.huge,
     Project = {
         Storage = {},
         Name="EmptyProject",
@@ -27,12 +29,12 @@ local OE = {
         Scenes = {}
     }
 }
-OE.huge = 2147483647 --int max, i guess
+print(OE.root,System.getCurrentScript())
 local function loadModule(ModuleName,...)
     local wk,response = GUI.workspace(),false
-    OE[ModuleName] = assert(loadfile(OE.root .. ModuleName..".lua"))(OE,...)
+    OE[ModuleName] = assert(load(require('filesystem').read(OE.root .. ModuleName..".lua"),OE.root .. ModuleName..".lua",args.loadMode or 't'))(OE,...)
     if not OE[ModuleName] then
-		local container = GUI.addBackgroundContainer(wk, true, true)
+        local container = GUI.addBackgroundContainer(wk, true, true)
         container.layout:addChild(GUI.button(1, 2, 20, 3, 0x989898, 0x030303, 0x030303, 0x989898, 'Continue')).onTouch = function()
             container:remove()
             response = true
@@ -52,7 +54,7 @@ local function loadModule(ModuleName,...)
     wk:stop()
     wk = nil
 end
-loadModule("Render", nil, not args.GPUBuffers, false, isDebug)
+loadModule("Render", nil, not args.GPUBuffers, false, isDebug, args.loadMode)
 loadModule("Script")
 loadModule("Localization")
 loadModule("Input")
@@ -65,6 +67,7 @@ function OE.deepcopy(orig)
     if orig_type == 'table' then
         copy = {}
         for orig_key, orig_value in next, orig, nil do
+            print(orig_key)
             copy[OE.deepcopy(orig_key)] = OE.deepcopy(orig_value)
         end
         setmetatable(copy, OE.deepcopy(getmetatable(orig)))
@@ -72,11 +75,6 @@ function OE.deepcopy(orig)
         copy = orig
     end
     return copy
-end
-local function removeObject(Object)
-    OE.Script.runEveryWithName('onObjectRemove',Object)
-    OE.CurrentScene[Object._ID] = nil
-    Object = nil
 end
 function OE.initWindow(Workspace)
     while running do
@@ -125,20 +123,10 @@ local function addScript(object, source, name,compile)
     end
 end
 function OE.nilObject()
-    local obj = {
-        _ID = math.random(0,OE.huge),
-        _Enabled = true,
-        _Index = 1,
-        _Remove = removeObject,
-        _setIndex = function(me, index)
-            local tmp = OE.CurrentScene.Objects[index]
-            OE.CurrentScene.Objects[index] = OE.CurrentScene.Objects[me._Index]
-            OE.CurrentScene.Objects[me._Index] = tmp
-            me._Index = index
-        end,
-        _addScript = addScript
-    }
-    obj:_addScript('MAIN_Transform.lua','Transform')
+    local obj = {}
+    OE.Script.shared.addScript(obj,'MAIN_Root.lua', 'Root')
+    obj.Root.scriptsOrder = {}
+    OE.Script.shared.addScript(obj,"MAIN_Transform.lua", 'Transform')
     return obj
 end
 function OE.createScene(Name)
@@ -195,7 +183,45 @@ if isDebug then
         debugHandler:write('\n')
     end
 else
-    OE.log = function() return false, 'debug is false' end
+    OE.log = function() return false, 'debug is disabled' end
 end
 
+OE.Script.shared.Remove = function(Object)
+    OE.Script.runEveryWithName('onObjectRemove',Object)
+    OE.CurrentScene[Object.Root.ID] = nil
+    Object = nil
+end
+
+OE.Script.shared.setIndex = function(me, index)
+    local tmp = OE.CurrentScene.Objects[index]
+    OE.CurrentScene.Objects[index] = OE.CurrentScene.Objects[me._Index]
+    OE.CurrentScene.Objects[me._Index] = tmp
+    me._Index = index
+end
+
+local scriptEnable = function(self, toggle)
+    if toggle then
+        OE.Script.runEveryWithName('onScriptEnable', self._Object)
+    else
+        OE.Script.runEveryWithName('onScriptDisable',self._Object)
+    end
+    self._Enabled = toggle
+end
+local scriptRemove = function(self)
+    table.remove(self._Object.Root.scriptsOrder, self._Object.Root.getScriptOrder(self._Name))
+    self = nil
+end
+local i = 0
+OE.Script.shared.addScript = function(Object, source, name, compileNow)
+    i = i + 1
+    if Object.Root then
+        table.insert(Object.Root.scriptsOrder, name)
+    end
+    Object[name] = {_Object = Object, _Name = name, _Index = i, _Enabled = true, _SourceFile = source, _Remove = scriptRemove , _SetEnable = scriptEnable}
+    if compileNow then
+        OE.Script.Compile(Object,Object[name],name)
+    end
+end
+
+print('done!')
 return OE

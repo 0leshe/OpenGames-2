@@ -1,4 +1,4 @@
-local render = assert(loadfile(string.gsub(require('system').getCurrentScript(),"/RenderLaunchTest.lua","/RenderTest.lua")))(nil,true,nil,true) -- Подгружаем рендер. Аргументы: 
+local render = assert(loadfile(string.gsub(require('system').getCurrentScript(),"/RenderLaunchTest.lua","/RenderTest.lua")))(nil,false,nil,true) -- Подгружаем рендер. Аргументы: 
 --Без предварительного режима рендера
 --Без буферов видеокарты. Нативные вызовы gpu будут мигать.
 --Не подгружать библиотеку screen

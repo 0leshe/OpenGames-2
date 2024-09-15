@@ -8,6 +8,7 @@ local args = {...}
 local currentRender = "perObject"
 local timerFPS = os.clock()
 local fpsTotal, fps = 0, 0
+local cache = {}
 local debugInfo = {0,0,0,0,'nil'}
 if args[2] then
   master.allocatedBuffer = gpu.allocateBuffer()
@@ -53,6 +54,11 @@ local function colidesWith(object)
     debugInfo[2] = debugInfo[2] + 1
     return colides
 end
+local function draw(obj)
+    if not cache[obj] then
+        obj.draw(obj)
+    end
+end
 local renderProcesses = {
     perObject = function()
       local objectsTime = 0
@@ -66,24 +72,20 @@ local renderProcesses = {
             for i = 1, #colidesB do
                 local obj = colidesB[i]
                 if not queueIndex[obj.id] then
-                    obj.draw(obj)
+                    draw(obj)
                     debugInfo[1] = debugInfo[1] + 1
                 end
             end
             screenUpdate()
+            draw(v)
             setDrawLimit(v.x,v.y,v.x+v.w-1,v.y+v.h-1)
-            v.draw(v)
             debugInfo[1] = debugInfo[1] + 1
             local colides = colidesWith(v)
-            bObj.x = v.x
-            bObj.y = v.y
-            bObj.h = v.h
-            bObj.w = v.w
-            bObj.index = v.index
+            bObj.x, bObj.y, bObj.h, bObj.w, bObj.index = v.x, v.y, v.h, v.w, v.index
             for i = 1, #colides do
                 local obj = colides[i]
                 if  not queueIndex[obj.id] and v.index < obj.index then
-                    obj.draw(obj)
+                    draw(obj)
                     debugInfo[1] = debugInfo[1] + 1
                     debugInfo[4] = obj.index
                 end
@@ -143,10 +145,12 @@ function master.process(forceFullFrame)
         debugInfo = {0,0,0,debugInfo[4],debugInfo[5]}
       end
   end
-  renderProcesses[currentRender]()
   if forceFullFrame then
     setDrawLimit(1,1,160,50)
     screenUpdate()
+  renderProcesses['default']()
+else
+  renderProcesses[currentRender]()
   end
   fps = fps + 1
   queueIndex = {}
@@ -172,7 +176,9 @@ function master.newObject(x,y,w,h,draw)
     remove = function(me) 
         objectsID[me.id] = nil
         table.remove(objects,me.index)
+        queueBuffer[me.id] = nil
         me = nil
+        master.process(true)
     end}
    local object = addObject(setmetatable({},{
         __newindex = function(self,k,v)
@@ -189,5 +195,6 @@ function master.newObject(x,y,w,h,draw)
    addQueue(object)
    return object
 end
+
 
 return master

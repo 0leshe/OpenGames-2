@@ -1,5 +1,5 @@
 local args = {...}
-local Render = {Matrix = assert(loadfile(string.gsub(require'System'.getCurrentScript(),"Render.lua","Matrix.lua")))(args[2],args[3],args[4],args[5])}
+local Render = {Matrix = assert(load(require('filesystem').read(args[1].root..'Matrix.lua'), nil, args[6]))(args[2],args[3],args[4],args[5])}
 
 function Render.clearRender()
   local objList = Render.Matrix.objects

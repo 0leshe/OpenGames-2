@@ -1,4 +1,9 @@
-local OE = loadfile("/OpenGames 2/Main.lua")()
+local scriptPath = string.gsub(require('System').getCurrentScript(),'/Test.app','')
+local code = require('filesystem').read(scriptPath)
+local args = {...}
+print(require('System').getCurrentScript(),scriptPath)
+_, args = require('System').parseArguments(table.unpack(args))
+local OE = load(code,scriptPath,args.loadMode or 't')()
 OE.createScene('Dev')
 local sky = OE.createObject('Skybox','Dev')
 local obj = OE.createObject('obj','Dev')
@@ -58,18 +63,18 @@ function onKeyDown(key)
     end
 end]])
 
-sky:_addScript('MAIN_Panel.lua',"Render")
+OE.Script.shared.addScript(sky,'MAIN_Panel.lua',"Render")
 sky.Render.color = 0x989898
 sky.Transform.Scale = {}
 sky.Transform.Scale.w = 160
 sky.Transform.Scale.h = 50
 
-obj:_addScript('MAIN_Text.lua',"Render")
-obj:_addScript('Test.lua',"TestScript")
+OE.Script.shared.addScript(obj,'MAIN_Text.lua',"Render")
+OE.Script.shared.addScript(obj,'Test.lua',"TestScript")
 obj.Render.text = '1234'
 
-obj1:_addScript('Test2.lua','TestScript')
-obj1:_addScript('MAIN_Sprite.lua','Render')
+OE.Script.shared.addScript(obj1,'Test2.lua','TestScript')
+OE.Script.shared.addScript(obj1,'MAIN_Sprite.lua','Render')
 --[[obj1.Render.color = 0x989898
 obj1.Transform.Scale = {}
 obj1.Transform.Scale.w = 160

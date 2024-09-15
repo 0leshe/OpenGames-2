@@ -1,9 +1,9 @@
 local System = require("System")
 local args = {...}
 local OE = args[1]
-local sharedToken = {}
+local sharedToken = {'1234',1234,math.random(1,1000)}
 local shared = {}
-local Scripts = {volcab={},vars={}}
+local Scripts = {shared = shared, volcab={},vars={}}
 
 -- Big thanks to fingercomp bc i dont know how this shi works
 local globalEnv = setmetatable({
@@ -13,9 +13,9 @@ local globalEnv = setmetatable({
 }, {__index = _ENV})
 local function runScript(code, privateVars, object, script)
   local vars = {}
-  local sharedNames = {}
   local scriptObj = script
   local privateNames = {}
+  local sharedNames = {}
   local privateNamesVars = {}
   privateVars = privateVars or {}
   for i, _ in pairs(privateVars) do
@@ -24,8 +24,8 @@ local function runScript(code, privateVars, object, script)
   local envMeta = {
     __index = function(self, k)
       OE.log('get.',k, scriptObj._SourceFile, scriptObj._Enabled)
-     -- return sharedNames[k] and shared[k] or privateNamesVars[k] and privateVars[k] or (privateNames[k] or vars[k] ~= nil) and vars[k] or globalEnv[k]
-       -- Оно выше, просто сжато. На спичках, да-да
+      return sharedNames[k] and shared[k] or privateNamesVars[k] and privateVars[k] or (privateNames[k] or vars[k] ~= nil) and vars[k] or globalEnv[k]
+       --[[ Оно выше, просто сжато. На спичках, да-да
           if sharedNames[k] then 
             return shared[k]
           elseif privateNamesVars[k] then
@@ -35,7 +35,7 @@ local function runScript(code, privateVars, object, script)
               or vars[k] ~= nil then 
             return vars[k]
           end
-          return globalEnv[k]
+          return globalEnv[k]]
     end,
 
     __newindex = function(self, k, v)
@@ -60,9 +60,15 @@ local function runScript(code, privateVars, object, script)
     end,
   }
   OE.log('compilation start.',scriptObj._SourceFile)
-  assert(load(code, scriptObj._SourceFile, "t", setmetatable({}, envMeta)))()
-  OE.log('compilation end.',scriptObj._SourceFile)
-  return vars
+  result, reason = pcall(load(code, scriptObj._SourceFile, "t", setmetatable({}, envMeta)))()
+  if result then
+      OE.log('compilation end.',scriptObj._SourceFile)
+      return vars, true
+  else
+      OE.log('COMPILATION FAILED.',scriptObj._SourceFile,reason)
+      return vars, false
+  end
+  
 end
 
 function Scripts.runEveryWithName(name,object,...)
@@ -102,6 +108,10 @@ function Scripts.Compile(object, scriptObj, scriptName)
     object[scriptName] = setmetatable({object[scriptName]._Enabled,object[scriptName]._SourceFile},{__index=script,__newindex=script})
    --object[scriptName] = script
     return script, script.Init and script.Init()
+end
+
+function Scripts.preCompile(object, scriptName)
+    
 end
 
 return Scripts

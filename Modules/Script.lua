@@ -60,19 +60,18 @@ local function runScript(code, privateVars, object, script)
     end,
   }
   OE.log('compilation start.',scriptObj._SourceFile)
-  result, reason = pcall(load(code, scriptObj._SourceFile, "t", setmetatable({}, envMeta)))()
+  result, reason = pcall(load(code, scriptObj._SourceFile, "t", setmetatable({}, envMeta)))
   if result then
-      OE.log('compilation end.',scriptObj._SourceFile)
+      OE.log('compilation end.',scriptObj._SourceFile, result, vars)
       return vars, true
   else
-      OE.log('COMPILATION FAILED.',scriptObj._SourceFile,reason)
+      OE.errlog('COMPILATION FAILED.',scriptObj._SourceFile,reason, result, vars)
       return vars, false
   end
-  
 end
 
 function Scripts.runEveryWithName(name,object,...)
-    if name ~= 'Update' then OE.log('runEveryWithName.',name,object and object._Name or '_WithoutFilter',...) end
+    if name ~= 'Update' then OE.log('runEveryWithName.',name, object and object._Name or (object and not object._Name and object ~= {} and '_Grouped') or '_WithoutFilter','args:',...) end
     if Scripts.volcab[name] then
         for i = 1, #Scripts.volcab[name] do
             v = Scripts.volcab[name][i][1]
@@ -80,11 +79,14 @@ function Scripts.runEveryWithName(name,object,...)
             scriptName = Scripts.volcab[name][i][3]
             i = Scripts.volcab[name][i][2]
             OE.log('inVolcab.',i,k,scriptName,v._Name)
-            if v == object then
+            if object and v._ID == object._ID then
                 OE.log('calling exactly for.',scriptName,v._Name)
                 i(...)
-            elseif not object then
+            elseif object and object[v] then
                 OE.log('calling grouped for.',scriptName,v._Name)
+                i(...)
+            elseif not object or object and object == {} then
+                OE.log('calling overall for.',scriptName,v._Name)
                 i(...)
             end
         end
@@ -103,15 +105,11 @@ local function Patern(script,patern)
 end
 
 function Scripts.Compile(object, scriptObj, scriptName)
-    local script = runScript(OE.Storage.getFile(scriptObj._SourceFile), {script = object[scriptName], Transform = object.Transform, Object = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, Time = OE.Time}, object, scriptObj)
+    local script, success = runScript(OE.Storage.getFile(scriptObj._SourceFile), {script = object[scriptName], Transform = object.Transform, Object = object, OE = OE, Debug = OE.Debug, CurrentScene = OE.CurrentScene, Input = OE.Input, Time = OE.Time}, object, scriptObj)
     Patern(script,scriptObj)
-    object[scriptName] = setmetatable({object[scriptName]._Enabled,object[scriptName]._SourceFile},{__index=script,__newindex=script})
+    object[scriptName] = setmetatable(object[scriptName],{__index=script,newindex=script})
    --object[scriptName] = script
     return script, script.Init and script.Init()
-end
-
-function Scripts.preCompile(object, scriptName)
-    
 end
 
 return Scripts

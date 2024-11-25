@@ -105,7 +105,7 @@ local renderProcesses = {
             objectsTime = objectsTime + os.clock()-time
         end
         debugInfo[1] = #objects
-        debugInfo[3] = objectsTime/debugInfo[1]
+        debugInfo[3] = objectsTime/#objects
         screenUpdate()
     end
 }

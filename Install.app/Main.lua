@@ -3,7 +3,6 @@ local System = require('System')
 local lc = System.getCurrentScriptLocalization()
 local ApplicationPath = string.gsub(System.getCurrentScript(),'Main.lua','')
 local fs = require('filesystem')
-local UserData = System.getUserSettings()
 local dataFiles = fs.list(ApplicationPath..'/InstallData/')
 
 local Colors = {0x202020,0x202020, 0x909090}
@@ -57,8 +56,9 @@ workspace:addChild(GUI.button(38,7,20,3,getColor(2),getColor(3),getColor(3),getC
                     GUI.alert("Failed to unpack "..dataFiles[i].." file.")
                 end
             end
-            UserData.OpenGames2EnignePath = fs.removeSlashes(input.text..'/OpenGames 2 Engine')
-            System.saveUserSettings()
+            local AppData = '/Users/'..System.getUser()..'/Applicaton data/OpenGames 2/'
+            fs.makeDirectory(AppData)
+            fs.write(AppData..'Main.json',require("JSON").encode({path = fs.removeSlashes(input.text..'/OpenGames 2 Engine')))
             workspace:removeChildren()
             workspace:addChild(GUI.text(2,3,getColor(3),lc.done))
             workspace:addChild(GUI.button(38,7,20,3,getColor(2),getColor(3),getColor(2),getColor(3),lc.exit)).onTouch = function()

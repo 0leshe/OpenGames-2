@@ -2,31 +2,28 @@ local GUI = require('GUI')
 local fs = require('Filesystem')
 local System = require('System')
 local uni = require('Unicode')
+local AppData = '/Users/'..System.getUser()..'/Applicaton data/OpenGames 2/'
 local lc = System.getCurrentScriptLocalization()
 local hubPath = string.gsub(System.getCurrentScript(),'Main.lua','')
-local UserData = System.getUserSettings()
+local UserData = require('JSON').decode(fs.read(AppData..'Main.json'))
 local ChoosedProject = 1
 local Colors = {light={0xEEEEEE, 0x202020, 0x808080}, dark={0x202020,0x202020, 0x909090}} -- bg,bg2,fg
 
-if not UserData.OpenGames then
-    UserData.OpenGames = {}
+if not UserData.Projects then
+    UserData.Projects = {}
     System.saveUserSettings()
 end
-if not UserData.OpenGames.Projects then
-    UserData.OpenGames.Projects = {}
-    System.saveUserSettings()
-end
-if not UserData.OpenGames.Settings then
-    UserData.OpenGames.Settings = {preferdLanguage = '',CurrentTheme = true}
+if not UserData.HubSettings then
+    UserData.HubSettings = {preferdLanguage = '',CurrentTheme = true}
     System.saveUserSettings()
 end
 local CurrentTheme
-if UserData.OpenGames.Settings.CurrentTheme then
+if UserData.HubSettings.CurrentTheme then
     CurrentTheme = 'dark'
 else
     CurrentTheme = 'light'
 end
-lc = fs.readTable(hubPath..'/Localizations/'..UserData.OpenGames.Settings.preferdLanguage..'.lang') or lc
+lc = fs.readTable(hubPath..'/Localizations/'..UserData.HubSettings.preferdLanguage..'.lang') or lc
 
 local function getColor(num)
     if num == 2 then
@@ -66,12 +63,12 @@ local function reloadInfo()
         infoPanel:remove()
     end
     infoPanel = winMask:addChild(GUI.container(55,7,44,29))
-    local proj = readProject(UserData.OpenGames.Projects[ChoosedProject])
+    local proj = readProject(UserData.Projects[ChoosedProject])
     infoPanel:addChild(GUI.panel(1,1,44,29,getColor(2)))
     infoPanel:addChild(GUI.text(2,2,getColor(3),lc.infoAbtProject))
     infoPanel:addChild(GUI.text(2,3,getColor(3),lc.Name .. ': '..proj.Name))
-    infoPanel:addChild(GUI.text(2,4,getColor(3),lc.Size .. ': '..fs.size(UserData.OpenGames.Projects[ChoosedProject])))
-    infoPanel:addChild(GUI.text(2,5,getColor(3),lc.lastModified .. ': '..os.date("%Y.%m.%d %H:%M",fs.lastModified(fs.removeSlashes(UserData.OpenGames.Projects[ChoosedProject]..'/Game.dat'))/72)))
+    infoPanel:addChild(GUI.text(2,4,getColor(3),lc.Size .. ': '..fs.size(UserData.Projects[ChoosedProject])))
+    infoPanel:addChild(GUI.text(2,5,getColor(3),lc.lastModified .. ': '..os.date("%Y.%m.%d %H:%M",fs.lastModified(fs.removeSlashes(UserData.Projects[ChoosedProject]..'/Game.dat'))/72)))
     local scenesCount = 0
     local cnt = 0
     local storageCount = 0
@@ -101,21 +98,21 @@ local function reloadInfo()
 end
 local projectsCont = winMask:addChild(GUI.container(3,3,47,37))
 projectsCont:addChild(GUI.panel(1,1,47,37,getColor(2)))
-local projectsLists = projectsCont:addChild(GUI.container(1,1,47,#UserData.OpenGames.Projects*8+4*#UserData.OpenGames.Projects))
+local projectsLists = projectsCont:addChild(GUI.container(1,1,47,#UserData.Projects*8+4*#UserData.Projects))
 local scrollProject = {hidden = true}
 local function checkCountForScrollBar()
-    if #UserData.OpenGames.Projects > 4 then
+    if #UserData.Projects > 4 then
         if scrollProject.hidden == false then
             scrollProject:remove()
         end
-        scrollProject = projectsCont:addChild(GUI.scrollBar(46,2,1,35,getColor(1),getColor(3),1,#UserData.OpenGames.Projects-3,1,1,1))
+        scrollProject = projectsCont:addChild(GUI.scrollBar(46,2,1,35,getColor(1),getColor(3),1,#UserData.Projects-3,1,1,1))
         scrollProject.onTouch = function()
             projectsLists.localY = -(scrollProject.value * 9 - 10)
         end
     end
 end
 local function projectPanel(i)
-    local projectPath = UserData.OpenGames.Projects[i]
+    local projectPath = UserData.Projects[i]
     local bonus = 1
     if scrollProject.hidden == false then
         bonus = 0
@@ -133,7 +130,7 @@ local function projectPanel(i)
 end
 local hintCreateNewProject
 checkCountForScrollBar()
-for i = 1,#UserData.OpenGames.Projects do
+for i = 1,#UserData.Projects do
     projectsLists:addChild(projectPanel(i))
 end
 
@@ -142,8 +139,8 @@ local loadProject = winMask:addChild(GUI.button(55,37,44,3,getColor(2),getColor(
 deleteProject.onTouch = function()
     if projectsLists.children[ChoosedProject] then
         table.remove(projectsLists.children,ChoosedProject)
-        fs.remove(UserData.OpenGames.Projects[ChoosedProject])
-        table.remove(UserData.OpenGames.Projects,ChoosedProject)
+        fs.remove(UserData.Projects[ChoosedProject])
+        table.remove(UserData.Projects,ChoosedProject)
         projectsLists.localY = 1
         scrollProject.value = 1
         for i = 1,#projectsLists.children do
@@ -152,9 +149,9 @@ deleteProject.onTouch = function()
                 projectsLists.children[i].localY = projectsLists.children[i].localY - 9
             end
         end
-        projectsLists.height = #UserData.OpenGames.Projects*8+4*#UserData.OpenGames.Projects
+        projectsLists.height = #UserData.Projects*8+4*#UserData.Projects
         System.saveUserSettings()
-        if #UserData.OpenGames.Projects == 0 then
+        if #UserData.Projects == 0 then
             deleteProject.disabled = true
             loadProject.hidden = true
             infoPanel.hidden = true
@@ -164,7 +161,7 @@ deleteProject.onTouch = function()
             reloadInfo()
             checkCountForScrollBar()
         end
-        if #UserData.OpenGames.Projects <= 4 then
+        if #UserData.Projects <= 4 then
             projectsLists.localY = 1
             if scrollProject.remove then
                 scrollProject:remove()
@@ -203,8 +200,8 @@ newProject.onTouch = function()
     local done = newProjectWin:addChild(GUI.button(2,12,30,3,getColor(2),getColor(3),getColor(3),getColor(2),lc.createProject))
     done.onTouch = function()
         if fs.exists(pathinput.text) and pathinput.text ~= '' then
-            for i = 1,#UserData.OpenGames.Projects do
-                if readProject(UserData.OpenGames.Projects[i]).Name == projectName.text and UserData.OpenGames.Projects[i] == fs.removeSlashes(pathinput.text..'/'..projectName.text) then -- My biggest if ever
+            for i = 1,#UserData.Projects do
+                if readProject(UserData.Projects[i]).Name == projectName.text and UserData.Projects[i] == fs.removeSlashes(pathinput.text..'/'..projectName.text) then -- My biggest if ever
                     GUI.alert(lc.projectAlrCreated) -- Try to create same project (not cool)
                     return
                 end
@@ -225,15 +222,15 @@ newProject.onTouch = function()
                 fs.writeTable(fs.removeSlashes(pathinput.text..'/'..projectName.text)..'/Game.dat',proj)
                 crutyolka:roll()
                 wk:draw(true)
-                UserData.OpenGames.Projects[#UserData.OpenGames.Projects+1] = fs.removeSlashes(pathinput.text..'/'..projectName.text)
+                UserData.Projects[#UserData.Projects+1] = fs.removeSlashes(pathinput.text..'/'..projectName.text)
                 System.saveUserSettings()
                 crutyolka:roll()
                 wk:draw(true)
-                projectsLists.height = #UserData.OpenGames.Projects*8+4*#UserData.OpenGames.Projects
-                projectsLists:addChild(projectPanel(#UserData.OpenGames.Projects))
+                projectsLists.height = #UserData.Projects*8+4*#UserData.Projects
+                projectsLists:addChild(projectPanel(#UserData.Projects))
                 crutyolka:roll()
                 wk:draw(true)
-                ChoosedProject = #UserData.OpenGames.Projects
+                ChoosedProject = #UserData.Projects
                 deleteProject.disabled = false
                 loadProject.hidden = false
                 hintCreateNewProject.hidden = true
@@ -248,7 +245,7 @@ newProject.onTouch = function()
 end
 hintCreateNewProject = winMask:addChild(GUI.text(100-2-math.ceil(uni.len(lc.hintCreateNewProject)*2),38,getColor(3),lc.hintCreateNewProject))
 hintCreateNewProject.hidden = true
-if #UserData.OpenGames.Projects == 0 then
+if #UserData.Projects == 0 then
     hintCreateNewProject.hidden = false
     deleteProject.disabled = true
     loadProject.hidden = true
@@ -283,38 +280,38 @@ itemSettings.onTouch = function()
         toend:addChild(GUI.panel(1,1,46,7,getColor(1)))
         toend:addChild(GUI.text(3,2,getColor(3),setting.text))
         if setting.type == 'input' then
-            toend:addChild(GUI.input(3,4,44,3,getColor(2),getColor(3),0xFF0000,getColor(3),getColor(2),UserData.OpenGames.Settings[setting.paramName],lc.text)).onInputFinished = function(_,self)
-                UserData.OpenGames.Settings[setting.paramName] = self.text
+            toend:addChild(GUI.input(3,4,44,3,getColor(2),getColor(3),0xFF0000,getColor(3),getColor(2),UserData.HubSettings[setting.paramName],lc.text)).onInputFinished = function(_,self)
+                UserData.HubSettings[setting.paramName] = self.text
             end
         elseif setting.type == 'comboBox' then
             local tmp = toend:addChild(GUI.comboBox(3, 4, 42, 3, getColor(2), getColor(3), getColor(2), getColor(3))) -- Украдено из первого Opengames
-            if UserData.OpenGames.Settings[setting.paramName] == nil then
-                UserData.OpenGames.Settings[setting.paramName] = false
+            if UserData.HubSettings[setting.paramName] == nil then
+                UserData.HubSettings[setting.paramName] = false
             end
             if setting.vars then
                 for i = 1, #setting.vars do
                     tmp:addItem(setting.vars[i].text).onTouch = function()
-                        UserData.OpenGames.Settings[setting.vars[i].param] = setting.vars[i].paramName
+                        UserData.HubSettings[setting.vars[i].param] = setting.vars[i].paramName
                         System.saveUserSettings()
                     end
                 end
             else
-                if UserData.OpenGames.Settings[setting.paramName] == true then
+                if UserData.HubSettings[setting.paramName] == true then
                     tmp:addItem(lc.truee).onTouch = function()
-                        UserData.OpenGames.Settings[setting.paramName] = true
+                        UserData.HubSettings[setting.paramName] = true
                         System.saveUserSettings()
                     end
                     tmp:addItem(lc.falsee).onTouch = function()
-                        UserData.OpenGames.Settings[setting.paramName] = false
+                        UserData.HubSettings[setting.paramName] = false
                         System.saveUserSettings()
                     end
                 else
                     tmp:addItem(lc.falsee).onTouch = function()
-                        UserData.OpenGames.Settings[setting.paramName] = false
+                        UserData.HubSettings[setting.paramName] = false
                         System.saveUserSettings()
                     end
                     tmp:addItem(lc.truee).onTouch = function()
-                        UserData.OpenGames.Settings[setting.paramName] = true
+                        UserData.HubSettings[setting.paramName] = true
                         System.saveUserSettings()
                     end
                 end
@@ -346,5 +343,5 @@ loadProject.onTouch = function()
     win.localX = 1
     win.localY = 1
     itemSettings:remove()
-    loadfile(hubPath..'/Editor.lua')(UserData.OpenGames.Projects[ChoosedProject], {wk,win,menu})
+    loadfile(hubPath..'/Editor.lua')(UserData.Projects[ChoosedProject], {wk,win,menu})
 end

@@ -3,7 +3,7 @@ local args = {...}
 local event = require('event')
 local localhost = require('component').modem.address
 local prefMethod = args[1] or 'LocalNetwork'
-local methods = loadfile(currentPath .. "NetworkInterfaces/"..prefMethod..".lua")()
+local methods = loadfile(currentPath .. "/NetworkInterfaces/"..prefMethod..".lua")()
 local server = {methods = methods, timerId, isServer = true, port = tonumber(args[2]) or 1212, maxConnections = math.huge, connections = {}, connectionsPlace = {}, maxPingLose = 2, pingLoses = {}, pingable = {}, handler}
 if type(args[3]) == 'function' then
   server.handler = args[3]
